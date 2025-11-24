@@ -23,9 +23,9 @@ export function useWorkerRegister(): UseWorkerRegisterReturn {
     try {
       await workerApiService.createProfile(data);
       setSuccess(true);
-      // Redirigir después de un breve delay
+      // Redirigir al dashboard después de completar el perfil
       setTimeout(() => {
-        navigate("/worker/profile");
+        navigate("/dashboard");
       }, 1500);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Error al registrar como trabajador";

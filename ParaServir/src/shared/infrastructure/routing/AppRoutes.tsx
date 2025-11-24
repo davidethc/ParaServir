@@ -4,6 +4,7 @@ import { LoginPage } from "../../../modules/User/infrastructure/ui/pages/LoginPa
 import { ForgotPasswordPage } from "../../../modules/User/infrastructure/ui/pages/ForgotPasswordPage";
 import { VerifyCodePage } from "../../../modules/User/infrastructure/ui/pages/VerifyCodePage";
 import { SetPasswordPage } from "../../../modules/User/infrastructure/ui/pages/SetPasswordPage";
+import { WorkerRegisterPage } from "../../../modules/Worker/infrastructure/ui/pages/WorkerRegisterPage";
 import { useAppSelector } from "../store/hooks";
 
 // Componente para rutas protegidas
@@ -42,6 +43,9 @@ export function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/verify-code" element={<VerifyCodePage />} />
       <Route path="/set-password" element={<SetPasswordPage />} />
+      
+      {/* Rutas de trabajadores */}
+      <Route path="/worker/register" element={<WorkerRegisterPage />} />
       
       {/* Ruta por defecto */}
       <Route path="/" element={<Navigate to="/login" replace />} />

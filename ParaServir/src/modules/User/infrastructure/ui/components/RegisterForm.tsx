@@ -1,4 +1,5 @@
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useUserRegister } from "../hooks/useUserRegister";
 import { cn } from "@/shared/lib/utils";
 
@@ -9,13 +10,8 @@ interface RegisterFormProps {
 
 export function RegisterForm({ className, onSuccess }: RegisterFormProps) {
   const { register, isLoading, error, success } = useUserRegister();
+  const navigate = useNavigate();
   
-  // Ejecutar callback cuando el registro sea exitoso
-  useEffect(() => {
-    if (success && onSuccess) {
-      onSuccess();
-    }
-  }, [success, onSuccess]);
   const [formData, setFormData] = useState({
     name: "",
     lastName: "",
@@ -38,13 +34,23 @@ export function RegisterForm({ className, onSuccess }: RegisterFormProps) {
     // Combinar nombre y apellido
     const fullName = `${formData.name} ${formData.lastName}`.trim();
 
-    await register({
+    const result = await register({
       id,
       name: fullName,
       email: formData.email,
       password: formData.password,
       role: formData.role,
     });
+
+    // Si el registro fue exitoso y el rol es "trabajador", redirigir a completar perfil
+    if (result && result.role === "trabajador") {
+      setTimeout(() => {
+        navigate("/worker/register");
+      }, 1500);
+    } else if (result && onSuccess) {
+      // Si es usuario normal, ejecutar callback
+      onSuccess();
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

@@ -37,10 +37,6 @@ export function WorkerRegisterForm({ className, onSuccess }: WorkerRegisterFormP
       is_active: true,
       verification_status: 'pending',
     });
-
-    if (success && onSuccess) {
-      onSuccess();
-    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

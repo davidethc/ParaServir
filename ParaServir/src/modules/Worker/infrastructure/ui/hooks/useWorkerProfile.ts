@@ -32,6 +32,7 @@ export function useWorkerProfile(userId: string | null): UseWorkerProfileReturn 
 
   useEffect(() => {
     fetchProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   return {
