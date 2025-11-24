@@ -5,6 +5,7 @@ import { UserName } from "../../Domain/UserName";
 import { UserId } from "../../Domain/UserId";
 import { UserCreatedAt } from "../../Domain/UserCreatedAT";
 
+
 export class UserCreate {
     constructor(repository: UserRepository) {
         this.repository = repository;
@@ -15,16 +16,22 @@ export class UserCreate {
     async run(
         id: string,
         name: string,
+        lastName : string,
         email : string,
-        password : string) : Promise<void> {
+        password : string,
+        role : string,
+        isVerified : boolean,
+        createdAt : Date,
+    ) : Promise<void> {
         const user = new User(
             new UserId(id),
             new UserName(name),
-            new UserEmail(email),
+            lastName,
+                new UserEmail(email),
             password,   
-            "user",
-            false,
-            new UserCreatedAt(new Date()));
+            role,
+            isVerified,
+            new UserCreatedAt(createdAt));
     await this.repository.create(user);
   
     }
