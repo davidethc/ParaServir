@@ -1,7 +1,7 @@
 import express, { Router } from 'express';
 import {port} from './config.js'
 import UserRoutes from './routes/user.js';
-import EmployeeRoutes from './routes/employee.js';
+import WorkerRoutes from './routes/worker.js';
 import morgan from "morgan";
 
 
@@ -18,7 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Usar rutas
 app.use('/users', UserRoutes);
-app.use('/employees', EmployeeRoutes);
+app.use('/workers', WorkerRoutes);
 
 
 app.listen(port);

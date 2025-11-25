@@ -2,7 +2,7 @@ import { pool } from "../db.js";
 import { validateUserData } from "../helpers/validateUser.js";
 import { checkDuplicateEmail } from "../helpers/checkDuplicateEmail.js";
 import bcrypt from "bcrypt";
-import { createWorker } from "./worker.js";
+import { createWorker, updateWorker } from "./worker.js";
 import { normalizeUserInput } from "../helpers/normalizeUser.js";
 
 export const list = async (req, res) => {
@@ -37,15 +37,13 @@ export const list = async (req, res) => {
 export const watch = async (req, res) => {
     try {
         const { id } = req.params;
-        if (isNaN(id)) {
-            return res.status(400).json({ message: 'ID inválido' });
-        }
+
         const { rows } = await pool.query(
             `SELECT p.*, u.email, u.role, u.is_verified
             FROM public.profiles p
             INNER JOIN public.users u
-            ON p.user_id = u.id 
-            WHERE id = $1;`, [id])
+            ON p.user_id = u.id
+            WHERE u.id = $1;`, [id])
         if (!rows || rows.length === 0) {
             return res.status(404).json({
                 status: "error",
@@ -70,10 +68,6 @@ export const deleteUser = async (req, res) => {
     try {
         const { id } = req.params;
 
-        if (isNaN(id)) {
-            return res.status(400).json({ message: 'ID inválido' });
-        }
-
         const { rows, rowCount } = await pool.query(
             'SELECT delete_user_and_related_data($1)', [id]
         );
@@ -84,8 +78,7 @@ export const deleteUser = async (req, res) => {
         }
 
         return res.status(200).json({
-            message: 'Usuario eliminado correctamente',
-            user: rows[0]
+            message: 'Usuario eliminado correctamente'
         });
     } catch (error) {
         console.error(error);
@@ -97,7 +90,10 @@ export const deleteUser = async (req, res) => {
 };
 
 export const createUser = async (req, res) => {
+    const client = await pool.connect();
     try {
+        await client.query('BEGIN');
+
         const { user, worker } = normalizeUserInput(req.body);
 
 
@@ -114,32 +110,34 @@ export const createUser = async (req, res) => {
         const passwordHash = await bcrypt.hash(user.password, 10);
 
         // Insertar en la base de datos
-        const result = await pool.query(
+        const result = await client.query(
             `INSERT INTO users (email, password_hash, role)
             VALUES ($1, $2, $3)
             RETURNING *`,
             [user.email, passwordHash, user.role]
         );
 
-        const newUser = result.rows[0]; // usuario recién creado
+        const newUser = result.rows[0];
 
-        await pool.query(
+        await client.query(
             `INSERT INTO profiles (user_id, full_name, phone, bio, location)
-            VALUES ($1, $2, $3, $4, $5, $6)`,
+            VALUES ($1, $2, $3, $4, $5)`,
             [
                 newUser.id,
-                user.fullname,
+                user.full_name,
                 user.phone,
                 user.bio || null,
                 user.location
             ]
         );
 
-        // Si es worker, guardamos su info adicional
+        // Si es worker, guardamos su info adicional usando el mismo cliente
         if (worker) {
-            const workerRow = await createWorker(newUser.id, worker);
+            const workerRow = await createWorker(client, newUser.id, worker);
             newUser.worker = workerRow;
         }
+
+        await client.query('COMMIT');
 
         // Respuesta final
         return res.status(201).json({
@@ -147,28 +145,30 @@ export const createUser = async (req, res) => {
             user: newUser
         });
     } catch (error) {
+        await client.query('ROLLBACK');
         return res.status(400).json({
             message: "No se pudo insertar el usuario",
             error: error.message,
         });
+    } finally {
+        client.release();
     }
 };
 
 
 export const update = async (req, res) => {
+    const client = await pool.connect();
     try {
-        const { id } = req.params;
+        await client.query('BEGIN');
 
-        if (isNaN(id)) {
-            return res.status(400).json({ message: 'ID inválido' });
-        }
+        const { id } = req.params;
 
         // Normalizamos la entrada igual que en createUser
         const { user, worker } = normalizeUserInput(req.body);
 
         // Verificar si el usuario existe
         const userExists = await pool.query(
-            `SELECT * FROM users WHERE id = $1`,
+            `SELECT * FROM users WHERE id = $1 FOR UPDATE`, // Bloquea la fila para la actualización
             [id]
         );
 
@@ -185,7 +185,7 @@ export const update = async (req, res) => {
         }
 
         // Actualizar tabla users
-        const updatedUserResult = await pool.query(
+        const updatedUserResult = await client.query(
             `UPDATE users
              SET email = $1,
                  password_hash = $2,
@@ -203,7 +203,7 @@ export const update = async (req, res) => {
         const updatedUser = updatedUserResult.rows[0];
 
         // Actualizar tabla profiles
-        await pool.query(
+        await client.query(
             `UPDATE profiles
              SET full_name = $1,
                  phone = $2,
@@ -211,7 +211,7 @@ export const update = async (req, res) => {
                  location = $4
              WHERE user_id = $5`,
             [
-                user.fullname,
+                user.full_name,
                 user.phone,
                 user.bio || null,
                 user.location,
@@ -219,11 +219,13 @@ export const update = async (req, res) => {
             ]
         );
 
-        // Actualización extra si es worker (opcional)
+        // Actualización extra si es worker (opcional), usando el mismo cliente
         if (worker) {
-            const updatedWorker = await updateWorker(id, worker);
+            const updatedWorker = await updateWorker(client, id, worker);
             updatedUser.worker = updatedWorker;
         }
+
+        await client.query('COMMIT');
 
         return res.status(200).json({
             message: 'Usuario actualizado',
@@ -231,9 +233,12 @@ export const update = async (req, res) => {
         });
 
     } catch (error) {
+        await client.query('ROLLBACK');
         return res.status(400).json({
             message: 'Error al actualizar el usuario',
             error: error.message
         });
+    } finally {
+        client.release();
     }
 };

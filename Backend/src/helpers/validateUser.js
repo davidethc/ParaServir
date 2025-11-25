@@ -1,13 +1,13 @@
 import validator from "validator";
 
-export function validateUserData(data) {
+export function validateUserData(body) {
   // Sanitizar datos
-  const full_name = (data.full_name || data.fullname || data.name || "").trim();
-  const phone = String(data.phone || "");
-  const email = (data.email || "").trim().toLowerCase();
-  const password = data.password || "";
-  const role = (data.role || "").trim().toLowerCase();
-  const location = (data.location || "").trim().toLowerCase();
+  const full_name = (body.full_name || "").trim();
+  const phone = String(body.phone || "");
+  const email = (body.email || "").trim().toLowerCase();
+  const password = body.password || "";
+  const role = (body.role || "").trim().toLowerCase();
+  const location = (body.location || "").trim().toLowerCase();
 
   // Validaciones detalladas
   if (validator.isEmpty(full_name)) {
