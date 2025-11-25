@@ -1,5 +1,10 @@
+-- SOLUCIÓN: HABILITAR LA EXTENSIÓN uuid-ossp
+-- Esta extensión proporciona la función uuid_generate_v4() necesaria para generar UUIDs.
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Resto de tu script SQL (el mismo que proporcionaste)
 
+-- Tabla para acciones administrativas
 CREATE TABLE IF NOT EXISTS public.admin_actions
 (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -10,6 +15,7 @@ CREATE TABLE IF NOT EXISTS public.admin_actions
     CONSTRAINT admin_actions_pkey PRIMARY KEY (id)
 );
 
+-- Tabla para mensajes entre usuarios
 CREATE TABLE IF NOT EXISTS public.messages
 (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -20,6 +26,7 @@ CREATE TABLE IF NOT EXISTS public.messages
     CONSTRAINT messages_pkey PRIMARY KEY (id)
 );
 
+-- Tabla para perfiles de usuario
 CREATE TABLE IF NOT EXISTS public.profiles
 (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -35,6 +42,7 @@ CREATE TABLE IF NOT EXISTS public.profiles
     CONSTRAINT profiles_user_id_key UNIQUE (user_id)
 );
 
+-- Tabla para reseñas de servicios
 CREATE TABLE IF NOT EXISTS public.reviews
 (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -48,6 +56,7 @@ CREATE TABLE IF NOT EXISTS public.reviews
     CONSTRAINT reviews_request_id_key UNIQUE (request_id)
 );
 
+-- Tabla para categorías de servicios
 CREATE TABLE IF NOT EXISTS public.service_categories
 (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -58,6 +67,7 @@ CREATE TABLE IF NOT EXISTS public.service_categories
     CONSTRAINT service_categories_name_key UNIQUE (name)
 );
 
+-- Tabla para solicitudes de servicio
 CREATE TABLE IF NOT EXISTS public.service_requests
 (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -73,6 +83,7 @@ CREATE TABLE IF NOT EXISTS public.service_requests
     CONSTRAINT service_requests_pkey PRIMARY KEY (id)
 );
 
+-- Tabla para usuarios (la tabla principal de autenticación)
 CREATE TABLE IF NOT EXISTS public.users
 (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -86,6 +97,7 @@ CREATE TABLE IF NOT EXISTS public.users
     CONSTRAINT users_email_key UNIQUE (email)
 );
 
+-- Tabla para perfiles de trabajador
 CREATE TABLE IF NOT EXISTS public.worker_profiles
 (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -101,6 +113,7 @@ CREATE TABLE IF NOT EXISTS public.worker_profiles
     CONSTRAINT worker_profiles_user_id_key UNIQUE (user_id)
 );
 
+-- Tabla para servicios específicos ofrecidos por trabajadores
 CREATE TABLE IF NOT EXISTS public.worker_services
 (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -114,6 +127,8 @@ CREATE TABLE IF NOT EXISTS public.worker_services
     updated_at timestamp without time zone DEFAULT now(),
     CONSTRAINT worker_services_pkey PRIMARY KEY (id)
 );
+
+-- Definición de claves foráneas e índices (igual que tu script original)
 
 ALTER TABLE IF EXISTS public.admin_actions
     ADD CONSTRAINT admin_actions_admin_id_fkey FOREIGN KEY (admin_id)
@@ -209,6 +224,7 @@ ALTER TABLE IF EXISTS public.worker_services
     ADD CONSTRAINT worker_services_worker_id_fkey FOREIGN KEY (worker_id)
     REFERENCES public.users (id) MATCH SIMPLE
     ON UPDATE NO ACTION
-    ON DELETE CASCADE;
+    ON DELETE CASCADE;
 
-END;
+-- La sentencia END no es necesaria al final de un script DDL en PostgreSQL
+-- END;

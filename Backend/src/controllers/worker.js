@@ -1,24 +1,27 @@
 import { pool } from "../db.js";
+import {validateWorkerData} from ("../helpers/validateWorker.js");
 
-export async function createEmployee(userId, employee) {
-
+export async function createWorker(userId, worker) {
     try {
-
-        // Insertar a la base de datos
-        await pool.query(
-            `INSERT INTO employee (id, titles, description, ocupation, documentation)
-                VALUES ($1, $2, $3, $4, $5)`,
-            [userId, employee.titles, employee.description, employee.ocupation, employee.documentation]
+        const result = await pool.query(
+            `INSERT INTO worker_profiles (id, service_description, years_experience, certification_url)
+             VALUES ($1, $2, $3, $4)
+             RETURNING *`,
+            [
+                userId,
+                worker.service_description,
+                worker.years_experience,
+                worker.certification_url
+            ]
         );
 
-    } catch (error) {
-        return res.status(400).json({
-            message: "Ocurrio un error al crear un empleado",
-            error: error.message
-        })
-    }
+        return result.rows[0];
 
+    } catch (error) {
+        throw new Error("Error al crear el perfil de empleado: " + error.message);
+    }
 }
+
 export async function list(req, res) {
     try {
         const { rows } = await pool.query(`
@@ -77,4 +80,31 @@ export async function watch(req, res) {
         })
     }
 
+}
+export async function updateWorker(userId, worker) {
+    try {
+        // Validar datos del worker
+        const { service_description, years_experience, certification_url } =
+            validateWorkerData(worker);
+
+        const result = await pool.query(
+            `UPDATE worker_profiles
+             SET service_description = $1,
+                 years_experience = $2,
+                 certification_url = $3
+             WHERE id = $4
+             RETURNING *`,
+            [
+                service_description,
+                years_experience,
+                certification_url,
+                userId
+            ]
+        );
+
+        return result.rows[0];
+
+    } catch (error) {
+        throw new Error("Error al actualizar el perfil de empleado: " + error.message);
+    }
 }

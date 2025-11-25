@@ -2,12 +2,16 @@ import { pool } from "../db.js";
 import { validateUserData } from "../helpers/validateUser.js";
 import { checkDuplicateEmail } from "../helpers/checkDuplicateEmail.js";
 import bcrypt from "bcrypt";
-import { createEmployee } from "./employee.js";
+import { createWorker } from "./worker.js";
 import { normalizeUserInput } from "../helpers/normalizeUser.js";
 
 export const list = async (req, res) => {
     try {
-        const { rows } = await pool.query('SELECT id, name, surname, email, role, created_at, image FROM users;');
+        const { rows } = await pool.query(
+            `SELECT p.*, u.email, u.role, u.is_verified
+            FROM public.profiles p
+            INNER JOIN public.users u
+            ON p.user_id = u.id;`);
         if (!rows || rows.length === 0) {
             return res.status(404).json({
                 status: "error",
@@ -36,7 +40,12 @@ export const watch = async (req, res) => {
         if (isNaN(id)) {
             return res.status(400).json({ message: 'ID inválido' });
         }
-        const { rows } = await pool.query('SELECT id, name, surname, email, role, created_at, image FROM users WHERE id = $1;', [id])
+        const { rows } = await pool.query(
+            `SELECT p.*, u.email, u.role, u.is_verified
+            FROM public.profiles p
+            INNER JOIN public.users u
+            ON p.user_id = u.id 
+            WHERE id = $1;`, [id])
         if (!rows || rows.length === 0) {
             return res.status(404).json({
                 status: "error",
@@ -66,9 +75,9 @@ export const deleteUser = async (req, res) => {
         }
 
         const { rows, rowCount } = await pool.query(
-            'DELETE FROM users WHERE id = $1 RETURNING *',
-            [id]
+            'SELECT delete_user_and_related_data($1)', [id]
         );
+        console.log(rows);
 
         if (rowCount === 0) {
             return res.status(404).json({ message: 'Usuario no encontrado' });
@@ -89,7 +98,7 @@ export const deleteUser = async (req, res) => {
 
 export const createUser = async (req, res) => {
     try {
-        const { user, employee } = normalizeUserInput(req.body);
+        const { user, worker } = normalizeUserInput(req.body);
 
 
         // Luego verificar si el email ya existe
@@ -106,16 +115,30 @@ export const createUser = async (req, res) => {
 
         // Insertar en la base de datos
         const result = await pool.query(
-            "INSERT INTO users (name, surname, email, password, role) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-            [user.name, user.surname, user.email, passwordHash, user.role]
+            `INSERT INTO users (email, password_hash, role)
+            VALUES ($1, $2, $3)
+            RETURNING *`,
+            [user.email, passwordHash, user.role]
         );
 
-        const newUser = result.rows[0];
+        const newUser = result.rows[0]; // usuario recién creado
 
-        // Si es employee, guardamos su info adicional
-        if (employee) {
-            const employeeRow = await createEmployee(newUser.id, employee);
-            newUser.employee = employeeRow;
+        await pool.query(
+            `INSERT INTO profiles (user_id, full_name, phone, bio, location)
+            VALUES ($1, $2, $3, $4, $5, $6)`,
+            [
+                newUser.id,
+                user.fullname,
+                user.phone,
+                user.bio || null,
+                user.location
+            ]
+        );
+
+        // Si es worker, guardamos su info adicional
+        if (worker) {
+            const workerRow = await createWorker(newUser.id, worker);
+            newUser.worker = workerRow;
         }
 
         // Respuesta final
@@ -135,24 +158,82 @@ export const createUser = async (req, res) => {
 export const update = async (req, res) => {
     try {
         const { id } = req.params;
+
         if (isNaN(id)) {
             return res.status(400).json({ message: 'ID inválido' });
         }
-        const { name, email, password } = validateUserData(req.body);
 
-        const passwordHash = await bcrypt.hash(password, 10);
+        // Normalizamos la entrada igual que en createUser
+        const { user, worker } = normalizeUserInput(req.body);
 
-        const result = await pool.query('UPDATE users SET name= $1, surname= $2, email=%3, password= $4, role= %5 WHERE id= $6 RETURNING *;',
-            [name, surname, email, passwordHash, role, id]
-        )
+        // Verificar si el usuario existe
+        const userExists = await pool.query(
+            `SELECT * FROM users WHERE id = $1`,
+            [id]
+        );
+
+        if (userExists.rowCount === 0) {
+            return res.status(404).json({
+                message: "El usuario no existe"
+            });
+        }
+
+        // Si viene password, la encriptamos
+        let passwordHash = userExists.rows[0].password_hash;
+        if (user.password) {
+            passwordHash = await bcrypt.hash(user.password, 10);
+        }
+
+        // Actualizar tabla users
+        const updatedUserResult = await pool.query(
+            `UPDATE users
+             SET email = $1,
+                 password_hash = $2,
+                 role = $3
+             WHERE id = $4
+             RETURNING *`,
+            [
+                user.email,
+                passwordHash,
+                user.role,
+                id
+            ]
+        );
+
+        const updatedUser = updatedUserResult.rows[0];
+
+        // Actualizar tabla profiles
+        await pool.query(
+            `UPDATE profiles
+             SET full_name = $1,
+                 phone = $2,
+                 bio = $3,
+                 location = $4
+             WHERE user_id = $5`,
+            [
+                user.fullname,
+                user.phone,
+                user.bio || null,
+                user.location,
+                id
+            ]
+        );
+
+        // Actualización extra si es worker (opcional)
+        if (worker) {
+            const updatedWorker = await updateWorker(id, worker);
+            updatedUser.worker = updatedWorker;
+        }
+
         return res.status(200).json({
             message: 'Usuario actualizado',
-            user: result.rows[0]
-        })
+            user: updatedUser
+        });
+
     } catch (error) {
         return res.status(400).json({
             message: 'Error al actualizar el usuario',
             error: error.message
-        })
+        });
     }
-}
+};

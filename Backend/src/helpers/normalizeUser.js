@@ -1,12 +1,12 @@
 import { validateUserData } from "./validateUser.js";
-import { validateEmployeeData } from "./validateEmployee.js";
+import { validateWorkerData } from "./validateWorker.js";
 
 export function normalizeUserInput(body) {
   // 1. Validar usuario
   const userData = validateUserData(body);
 
   // 2. Si no es empleado, devuelves solo user
-  if (userData.role !== "employee") {
+  if (userData.role !== "worker") {
     return {
       user: userData,
       employee: null
@@ -14,10 +14,10 @@ export function normalizeUserInput(body) {
   }
 
   // 3. Si es empleado, validas la info extra
-  const employeeData = validateEmployeeData(body);
+  const workerData = validateWorkerData(body);
 
   return {
     user: userData,
-    employee: employeeData
+    worker: workerData
   };
 }

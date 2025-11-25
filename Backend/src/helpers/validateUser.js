@@ -1,20 +1,26 @@
 import validator from "validator";
 
 export function validateUserData(data) {
-  // Sanitizar datos (evita problemas por espacios u otros caracteres)
-  const name = (data.name || "").trim();
-  const surname = (data.surname || "").trim();
+  // Sanitizar datos
+  const full_name = (data.full_name || data.fullname || data.name || "").trim();
+  const phone = String(data.phone || "");
   const email = (data.email || "").trim().toLowerCase();
   const password = data.password || "";
   const role = (data.role || "").trim().toLowerCase();
+  const location = (data.location || "").trim().toLowerCase();
 
   // Validaciones detalladas
-  if (validator.isEmpty(name)) {
+  if (validator.isEmpty(full_name)) {
     throw new Error("El nombre no puede estar vacío.");
   }
 
-  if(validator.isEmpty(surname)){
-    throw new Error("Debe ingresar apellidos");
+  // Teléfono debe ser número y con 10 dígitos
+  if (!validator.isLength(phone, { min: 10, max: 10 })) {
+    throw new Error("El número de teléfono debe tener 10 dígitos.");
+  }
+
+  if (!validator.isInt(phone)) {
+    throw new Error("El número de teléfono debe ser numérico.");
   }
 
   if (validator.isEmpty(email)) {
@@ -29,18 +35,22 @@ export function validateUserData(data) {
     throw new Error("La contraseña no puede estar vacía.");
   }
 
-  if (!validator.isLength(password, { min: 8 })) {
-    throw new Error("La contraseña debe tener al menos 8 caracteres.");
+  if (!validator.isLength(password, { min: 8, max: 12 })) {
+    throw new Error("La contraseña debe tener entre 8 y 12 caracteres.");
   }
 
-  if(validator.isEmpty(role)){
-    throw new Error("Debemos saber quén es usted.")
+  if (validator.isEmpty(role)) {
+    throw new Error("Debemos saber quién es usted.");
   }
 
-  // (Opcional) Exigir combinación de letras, números y símbolos
+  if (validator.isEmpty(location)) {
+    throw new Error("Debe ingresar una ubicación.");
+  }
+
+  // Contraseña debe tener: letras + números + un símbolo
   if (!validator.matches(password, /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])/)) {
     throw new Error("La contraseña debe incluir letras, números y un símbolo especial.");
   }
 
-  return { name, surname, email, password, role };
-}
+  return { full_name, phone, email, password, role, location };
+};
