@@ -1,54 +1,52 @@
 import { VerifyCodeForm } from "../components/VerifyCodeForm";
 import loginRecuperatePasswordImage from "@/shared/assets/login_recuperate_password.png";
+import logoServir from "@/shared/assets/logo_servir.png";
 import { Link } from "react-router-dom";
 
 export function VerifyCodePage() {
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl w-full bg-white rounded-3xl shadow-xl overflow-hidden">
-        {/* Header con Logo */}
-        <div className="flex justify-start p-6">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-white text-sm font-bold">P</span>
+    <div className="h-screen bg-white overflow-hidden flex flex-col">
+      {/* Header con Logo */}
+      <div className="flex justify-start p-6 flex-shrink-0">
+        <img 
+          src={logoServir} 
+          alt="Para Servir Logo" 
+          className="h-24 w-auto"
+        />
+      </div>
+
+      {/* Layout de dos columnas */}
+      <div className="grid md:grid-cols-2 gap-0 flex-1 overflow-hidden">
+        {/* Columna izquierda - Formulario */}
+        <div className="p-6 sm:p-8 flex items-center justify-center overflow-y-auto">
+          <div className="max-w-md w-full">
+            <div className="mb-4">
+              <Link to="/login" className="text-sm text-gray-600 hover:text-gray-800 mb-3 inline-block">
+                &lt; Back to login
+              </Link>
             </div>
-            <span className="text-gray-900 font-semibold">Your Logo</span>
+            
+            <div className="mb-6">
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                Verify code
+              </h2>
+              <p className="text-gray-600 text-sm">
+                An authentication code has been sent to your email.
+              </p>
+            </div>
+
+            <VerifyCodeForm />
           </div>
         </div>
 
-        {/* Layout de dos columnas */}
-        <div className="grid md:grid-cols-2 gap-0">
-          {/* Columna izquierda - Formulario */}
-          <div className="p-8 sm:p-12">
-            <div className="max-w-md mx-auto">
-              <div className="mb-6">
-                <Link to="/login" className="text-sm text-gray-600 hover:text-gray-800 mb-4 inline-block">
-                  &lt; Back to login
-                </Link>
-              </div>
-              
-              <div className="mb-8">
-                <h2 className="text-4xl font-bold text-gray-900 mb-3">
-                  Verify code
-                </h2>
-                <p className="text-gray-600 text-base">
-                  An authentication code has been sent to your email.
-                </p>
-              </div>
-
-              <VerifyCodeForm />
-            </div>
-          </div>
-
-          {/* Columna derecha - Ilustración */}
-          <div className="p-8 flex items-center justify-center bg-gray-50">
-            <div className="w-full max-w-md">
-              <img 
-                src={loginRecuperatePasswordImage} 
-                alt="Verify code illustration" 
-                className="w-full h-auto object-contain"
-              />
-            </div>
+        {/* Columna derecha - Ilustración */}
+        <div className="p-6 flex items-center justify-center bg-white overflow-hidden">
+          <div className="w-full max-w-md h-full flex items-center">
+            <img 
+              src={loginRecuperatePasswordImage} 
+              alt="Verify code illustration" 
+              className="w-full h-auto object-contain max-h-full"
+            />
           </div>
         </div>
       </div>
