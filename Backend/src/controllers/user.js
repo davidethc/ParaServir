@@ -1,5 +1,4 @@
 import { pool } from "../db.js";
-import { validateUserData } from "../helpers/validateUser.js";
 import { checkDuplicateEmail } from "../helpers/checkDuplicateEmail.js";
 import bcrypt from "bcrypt";
 import { createWorker, updateWorker } from "./worker.js";
@@ -11,7 +10,8 @@ export const list = async (req, res) => {
             `SELECT p.*, u.email, u.role, u.is_verified
             FROM public.profiles p
             INNER JOIN public.users u
-            ON p.user_id = u.id;`);
+            ON p.user_id = u.id
+            WHERE u.role = 'client';`);
         if (!rows || rows.length === 0) {
             return res.status(404).json({
                 status: "error",

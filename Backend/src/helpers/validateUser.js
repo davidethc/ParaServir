@@ -35,8 +35,8 @@ export function validateUserData(body) {
     throw new Error("La contraseña no puede estar vacía.");
   }
 
-  if (!validator.isLength(password, { min: 8, max: 12 })) {
-    throw new Error("La contraseña debe tener entre 8 y 12 caracteres.");
+  if (!validator.isLength(password, { min: 8, max: 15 })) {
+    throw new Error("La contraseña debe tener entre 8 y 15 caracteres.");
   }
 
   if (validator.isEmpty(role)) {
