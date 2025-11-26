@@ -1,24 +1,62 @@
 import { LoginForm } from "../components/LoginForm";
-import loginOkeyImage from "@/shared/assets/login_okey.png";
+
 import logoServir from "@/shared/assets/logo_servir.png";
 
 export function LoginPage() {
   return (
-    <div className="h-screen bg-white overflow-hidden flex flex-col">
-      {/* Header con Logo */}
-      <div className="flex justify-start p-6 flex-shrink-0">
-        <img 
-          src={logoServir} 
-          alt="Para Servir Logo" 
-          className="h-24 w-auto"
-        />
-      </div>
+    <div className="h-screen w-full relative overflow-hidden flex flex-col">
+      {/* Dashed Grid */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, #e7e5e4 1px, transparent 1px),
+            linear-gradient(to bottom, #e7e5e4 1px, transparent 1px)
+          `,
+          backgroundSize: "20px 20px",
+          backgroundPosition: "0 0, 0 0",
+          maskImage: `
+            repeating-linear-gradient(
+              to right,
+              black 0px,
+              black 3px,
+              transparent 3px,
+              transparent 8px
+            ),
+            repeating-linear-gradient(
+              to bottom,
+              black 0px,
+              black 3px,
+              transparent 3px,
+              transparent 8px
+            )
+          `,
+          WebkitMaskImage: `
+            repeating-linear-gradient(
+              to right,
+              black 0px,
+              black 3px,
+              transparent 3px,
+              transparent 8px
+            ),
+            repeating-linear-gradient(
+              to bottom,
+              black 0px,
+              black 3px,
+              transparent 3px,
+              transparent 8px
+            )
+          `,
+          maskComposite: "intersect",
+          WebkitMaskComposite: "source-in",
+        }}
+      />
 
       {/* Layout de dos columnas */}
-      <div className="grid md:grid-cols-2 gap-0 flex-1 overflow-hidden">
+      <div className="grid md:grid-cols-2 gap-0 flex-1 overflow-hidden relative z-10">
         {/* Columna izquierda - Formulario */}
-        <div className="p-6 sm:p-8 flex items-center justify-center overflow-y-auto">
-          <div className="max-w-md w-full">
+        <div className="p-8 sm:p-12 flex items-center justify-center overflow-y-auto">
+          <div className="max-w-md w-full border-4 border-blue-800/50 rounded-lg p-8">
             <div className="mb-6">
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
                 Login
@@ -33,12 +71,13 @@ export function LoginPage() {
         </div>
 
         {/* Columna derecha - Ilustración */}
-        <div className="p-6 flex items-center justify-center bg-white overflow-hidden">
-          <div className="w-full max-w-md h-full flex items-center">
+        <div className="p-4 pl-0 flex items-center justify-start bg-white overflow-hidden">
+          <div className="w-full h-full flex items-center justify-start">
             <img 
-              src={loginOkeyImage} 
-              alt="Login illustration" 
-              className="w-full h-auto object-contain max-h-full"
+              src={logoServir} 
+              alt="Para Servir Logo" 
+              className="w-auto h-[75vh] max-w-full object-contain"
+              style={{ marginBottom: '100px', marginLeft: '-60px' }}
             />
           </div>
         </div>
