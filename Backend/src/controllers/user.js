@@ -7,7 +7,7 @@ import { normalizeUserInput } from "../helpers/normalizeUser.js";
 export const list = async (req, res) => {
     try {
         const { rows } = await pool.query(
-            `SELECT p.*, u.email, u.role, u.is_verified
+            `SELECT p.first_name, p.last_name, p.cedula, p.phone, p.location, p.avatar_url, u.email, u.role, u.is_verified
             FROM public.profiles p
             INNER JOIN public.users u
             ON p.user_id = u.id
@@ -39,10 +39,10 @@ export const watch = async (req, res) => {
         const { id } = req.params;
 
         const { rows } = await pool.query(
-            `SELECT p.*, u.email, u.role, u.is_verified
+            `SELECT p.first_name, p.last_name, p.cedula, p.phone, p.location, p.avatar_url, u.email, u.role, u.is_verified
             FROM public.profiles p
             INNER JOIN public.users u
-            ON p.user_id = u.id
+            ON p.user_id = u.id 
             WHERE u.id = $1;`, [id])
         if (!rows || rows.length === 0) {
             return res.status(404).json({
@@ -120,14 +120,16 @@ export const createUser = async (req, res) => {
         const newUser = result.rows[0];
 
         await client.query(
-            `INSERT INTO profiles (user_id, full_name, phone, bio, location)
-            VALUES ($1, $2, $3, $4, $5)`,
+            `INSERT INTO profiles (user_id, first_name, last_name, cedula, phone, location, avatar_url)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
             [
                 newUser.id,
-                user.full_name,
+                user.first_name,
+                user.last_name,
+                user.cedula || null,
                 user.phone,
-                user.bio || null,
-                user.location
+                user.location || null,
+                user.avatar_url || null
             ]
         );
 
@@ -205,16 +207,20 @@ export const update = async (req, res) => {
         // Actualizar tabla profiles
         await client.query(
             `UPDATE profiles
-             SET full_name = $1,
-                 phone = $2,
-                 bio = $3,
-                 location = $4
-             WHERE user_id = $5`,
+             SET first_name = $1,
+                 last_name = $2,
+                 cedula = $3,
+                 phone = $4,
+                 location = $5,
+                 avatar_url = $6
+             WHERE user_id = $7`,
             [
-                user.full_name,
+                user.first_name,
+                user.last_name,
+                user.cedula || null,
                 user.phone,
-                user.bio || null,
-                user.location,
+                user.location || null,
+                user.avatar_url || null,
                 id
             ]
         );

@@ -6,10 +6,10 @@ export function normalizeUserInput(body) {
   const userData = validateUserData(body);
 
   // 2. Si no es empleado, devuelves solo user
-  if (userData.role !== "worker") {
+  if (userData.role !== "trabajador" && userData.role !== "worker") {
     return {
       user: userData,
-      employee: null
+      worker: null
     };
   }
 
