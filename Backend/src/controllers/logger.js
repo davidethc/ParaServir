@@ -60,3 +60,28 @@ export const login = async (req, res) => {
         });
     }
 };
+
+
+export const logout = async(req, res)=>{
+    try{        
+        // 1. **Borrar la Cookie del Token:**
+        // El servidor envía una cookie con el mismo nombre, pero expirada.
+        res.cookie('access_token', '', { 
+            expires: new Date(0), 
+            httpOnly: true,       // Mantener la bandera de seguridad
+            secure: process.env.NODE_ENV === 'production', // Usar solo sobre HTTPS en producción
+            sameSite: 'strict'    // Recomendado para seguridad CSRF
+        });
+
+        // 2. Respuesta de confirmación
+        return res.status(200).json({
+            status: "success",
+            message: "Sesión cerrada. Cookie de token eliminada."
+        });
+    }catch(error){
+        return res.status(400).json({
+            message:"Hubo un error al cerrar sesión",
+            error: error.message
+        })
+    }
+}

@@ -1,7 +1,9 @@
 import jwt from "jwt-simple";
 import moment from "moment";
+import dotenv from "dotenv";
+dotenv.config();
 
-export const secret = "Barderos2005.";
+export const secret = process.env.JWT_SECRET;
 
 export const createToken = (user) => {
     const payload = {

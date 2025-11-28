@@ -1,10 +1,14 @@
 import express, { Router } from 'express';
-import {port} from './config.js'
+import { port } from './config.js';
+import cookieParser from 'cookie-parser';
 import UserRoutes from './routes/user.js';
 import WorkerRoutes from './routes/worker.js';
 import LoggerRoutes from './routes/logger.js';
 import morgan from "morgan";
+import dotenv from 'dotenv';
 
+
+dotenv.config();
 
 const app = express();
 
@@ -16,6 +20,9 @@ app.use(express.json());
 
 // Aceptar peticiones post con form encoded
 app.use(express.urlencoded({ extended: true }));
+
+// Configurar cookies
+app.use(cookieParser());
 
 // Usar rutas
 app.use('/users', UserRoutes);

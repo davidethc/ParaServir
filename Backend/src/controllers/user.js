@@ -3,6 +3,8 @@ import { checkDuplicateEmail } from "../helpers/checkDuplicateEmail.js";
 import bcrypt from "bcrypt";
 import { createWorker, updateWorker } from "./worker.js";
 import { normalizeUserInput } from "../helpers/normalizeUser.js";
+import { sendVerificationEmail } from "../helpers/mail.js";
+import { createToken } from "../helpers/jwt.js";
 
 export const list = async (req, res) => {
     try {
@@ -108,6 +110,15 @@ export const createUser = async (req, res) => {
 
         // Encriptar contraseña
         const passwordHash = await bcrypt.hash(user.password, 10);
+
+        // Crear token para verificar email
+        const verificationToken = createToken(user);
+        const verificationLink = `http://localhost:3900/verify-email?token=${verificationToken}`;
+
+        // Enviar email de verificacion (si falla lanzará excepción y saltará al catch)
+        await sendVerificationEmail(user.email, verificationLink);
+        console.log(process.env.RESEND_API_KEY)
+
 
         // Insertar en la base de datos
         const result = await client.query(
