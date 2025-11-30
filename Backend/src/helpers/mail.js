@@ -10,7 +10,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function sendVerificationEmail(direction, verificationLink) {
     try {
         const response = await resend.emails.send({
-            from: "ParaServir <onboarding@resend.dev>",
+            from: "ParaServir <noreply@monkyd.com>",
             to: direction,
             subject: "Verificación de cuenta",
             html: verificationEmailTemplate(verificationLink)

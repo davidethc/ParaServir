@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { list, watch, deleteUser, createUser, update } from "../controllers/user.js";
 import { auth } from "../middlewares/auth.js";
+import {verifyEmail} from "../controllers/logger.js";
 
 const router = Router();
 

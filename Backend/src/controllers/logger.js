@@ -1,6 +1,8 @@
 import bcrypt from "bcrypt";
 import {pool} from "../db.js";
-import { createToken } from "../helpers/jwt.js";
+import { createToken, secret } from "../helpers/jwt.js";
+import jwt from "jwt-simple";
+import moment from "moment";
 
 export const login = async (req, res) => {
     try {
@@ -64,8 +66,7 @@ export const login = async (req, res) => {
 
 export const logout = async(req, res)=>{
     try{        
-        // 1. **Borrar la Cookie del Token:**
-        // El servidor envía una cookie con el mismo nombre, pero expirada.
+        // Borrar la Cookie del Token
         res.cookie('access_token', '', { 
             expires: new Date(0), 
             httpOnly: true,       // Mantener la bandera de seguridad
@@ -73,7 +74,7 @@ export const logout = async(req, res)=>{
             sameSite: 'strict'    // Recomendado para seguridad CSRF
         });
 
-        // 2. Respuesta de confirmación
+        // Respuesta de confirmación
         return res.status(200).json({
             status: "success",
             message: "Sesión cerrada. Cookie de token eliminada."
@@ -85,3 +86,42 @@ export const logout = async(req, res)=>{
         })
     }
 }
+
+export const verifyEmail = async(req, res)=> {
+    const { token } = req.query;
+
+    if (!token) {
+        return res.status(400).json({ message: "Token no proporcionado" });
+    }
+
+    try{
+        const decoded = jwt.decode(token, secret);
+
+        // Verificar expiración (exp está en segundos)
+        if (decoded.exp && decoded.exp <= moment().unix()) {
+            return res.status(400).json({ message: "Token expirado" });
+        }
+
+        const userId = decoded.id;
+        if (!userId) {
+            return res.status(400).json({ message: "Token inválido: no contiene id de usuario" });
+        }
+
+        const result = await pool.query(
+            "UPDATE users SET is_verified = true WHERE id = $1 RETURNING *",
+            [userId]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: "Usuario no encontrado" });
+        }
+
+        return res.json({ message: "Correo verificado exitosamente" });
+        
+    }catch(error){
+        return res.status(400).json({
+            message: "Token inválido o expirado",
+            error: error.message,
+        });
+    }
+};

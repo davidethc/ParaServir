@@ -98,10 +98,10 @@ export const createUser = async (req, res) => {
 
         const { user, worker } = normalizeUserInput(req.body);
 
-
-        // Luego verificar si el email ya existe
+        // Verificar si el email ya existe
         const emailExists = await checkDuplicateEmail(user.email);
         if (emailExists) {
+            await client.query('ROLLBACK');
             return res.status(400).json({
                 status: "error",
                 message: "Ya existe un usuario con ese email",
@@ -111,24 +111,15 @@ export const createUser = async (req, res) => {
         // Encriptar contraseña
         const passwordHash = await bcrypt.hash(user.password, 10);
 
-        // Crear token para verificar email
-        const verificationToken = createToken(user);
-        const verificationLink = `http://localhost:3900/verify-email?token=${verificationToken}`;
-
-        // Enviar email de verificacion (si falla lanzará excepción y saltará al catch)
-        await sendVerificationEmail(user.email, verificationLink);
-        console.log(process.env.RESEND_API_KEY)
-
-
         // Insertar en la base de datos
-        const result = await client.query(
+        const insertUser = await client.query(
             `INSERT INTO users (email, password_hash, role)
             VALUES ($1, $2, $3)
             RETURNING *`,
             [user.email, passwordHash, user.role]
         );
 
-        const newUser = result.rows[0];
+        const newUser = insertUser.rows[0];
 
         await client.query(
             `INSERT INTO profiles (user_id, first_name, last_name, cedula, phone, location, avatar_url)
@@ -152,16 +143,46 @@ export const createUser = async (req, res) => {
 
         await client.query('COMMIT');
 
-        // Respuesta final
+        // Generar token de verificación y enlace (usando id real)
+        const verificationToken = createToken({ id: newUser.id, email: newUser.email });
+        const verificationLink = `http://localhost:3900/auth/verify-email?token=${verificationToken}`;
+
+        // Intentar enviar email de verificación, pero no revertir la creación si falla
+        try {
+            await sendVerificationEmail(newUser.email, verificationLink);
+        } catch (mailErr) {
+            console.error('No se pudo enviar email de verificación:', mailErr.message || mailErr);
+        }
+
+        // Log the verification link so it can be used during testing if email delivery fails
+        console.log('Verification link:', verificationLink);
+
+        // Generar token de sesión y devolverlo
+        const sessionToken = createToken({ id: newUser.id, email: newUser.email });
+
+        // Enviar cookie HTTP-only (opcional)
+        try {
+            res.cookie('access_token', sessionToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 48 * 60 * 60 * 1000 // 48 horas
+            });
+        } catch (cookieErr) {
+            // Si no se puede setear cookie, seguir devolviendo token en body
+            console.error('No se pudo setear cookie de sesión:', cookieErr.message || cookieErr);
+        }
+
         return res.status(201).json({
-            message: "Usuario agregado",
-            user: newUser
+            message: 'Usuario agregado',
+            user: newUser,
+            token: sessionToken
         });
     } catch (error) {
-        await client.query('ROLLBACK');
+        try { await client.query('ROLLBACK'); } catch (e) { /* ignore */ }
         return res.status(400).json({
-            message: "No se pudo insertar el usuario",
-            error: error.message,
+            message: 'No se pudo insertar el usuario',
+            error: error && error.message ? error.message : String(error),
         });
     } finally {
         client.release();
