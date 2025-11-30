@@ -1,4 +1,4 @@
-import type { User } from "../Domain/User";
+import type { User } from "./User";
 
 export interface UserRepository {
     create(user : User) : Promise<void>;
