@@ -14,14 +14,22 @@ export class UserCreate {
     private repository: UserRepository;
 
     async run(
-        id: string,
         email: string,
         passwordHash: string,
         role: string,
         isVerified: boolean = false
-    ): Promise<void> {
+    ): Promise<User> {
+        // Verificar si el usuario ya existe
+        const existingUser = await this.repository.findByEmail(email);
+        if (existingUser) {
+            throw new Error("User with this email already exists");
+        }
+
+        // Generar ID automáticamente
+        const userId = UserId.generate();
+        
         const user = new User(
-            new UserId(id),
+            userId,
             new UserEmail(email),
             new UserPasswordHash(passwordHash),
             new UserRole(role),
@@ -29,5 +37,6 @@ export class UserCreate {
         );
 
         await this.repository.create(user);
+        return user;
     }
 }

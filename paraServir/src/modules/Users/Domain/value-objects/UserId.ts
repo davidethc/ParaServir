@@ -19,8 +19,12 @@ export class UserId {
     }
 
     static generate(): UserId {
+        // Generar UUID v4 usando crypto.randomUUID() (disponible en navegadores modernos)
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return new UserId(crypto.randomUUID());
+        }
+        // Fallback para entornos sin crypto.randomUUID
         // En producción, usarías uuid.v4() o uuid_generate_v4() de PostgreSQL
-        // Por ahora retornamos un placeholder
-        throw new Error("Use a UUID generator to create UserId");
+        throw new Error("UUID generation not available. Use crypto.randomUUID() or install uuid package");
     }
 }
