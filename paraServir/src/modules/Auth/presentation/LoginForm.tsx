@@ -31,7 +31,8 @@ export function LoginForm() {
   return (
     <div className="min-h-screen flex bg-white">
       {/* Izquierda: Formulario */}
-      <div className="flex-1 flex flex-col justify-between px-8 py-6 max-w-xl mx-auto">
+
+      <div className="flex-1 flex flex-col justify-between px-8 py-6 max-w-xl mx-auto mt-34 ml-44" >
         <div>
           <div className="mb-8 mt-8">
             <div className="mb-2 text-2xl font-bold text-gray-800">Inicia sesión en tu cuenta</div>
@@ -110,7 +111,12 @@ export function LoginForm() {
       </div>
       {/* Derecha: Logo */}
       <div className="hidden md:flex flex-1 items-center justify-center bg-white">
-        <img src="src/shared/Assets/logo_servir.png" alt="Logo ParaServir" className="max-w-xs w-full" />
+          <img 
+           src="src/shared/Assets/logo_servir.png" 
+           alt="Logo ParaServir" 
+           className="w-[620px] h-[620px] object-contain mx-auto mb-94"
+           style={{ minWidth: 520, minHeight: 520 }}
+          />
       </div>
     </div>
   );
