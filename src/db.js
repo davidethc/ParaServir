@@ -1,10 +1,16 @@
 import pg from 'pg';
 
-export const pool=new pg.Pool({
-    user: "postgres",
-    host: "localhost",
-    password: "admin123",
-    database: "paraservir",
-    port: "5432"
-})
+let pool;
 
+if (!globalThis._pool) {
+  globalThis._pool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false
+    }
+  });
+}
+
+pool = globalThis._pool;
+
+export { pool };
