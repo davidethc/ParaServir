@@ -15,6 +15,7 @@ export class LoginUseCase {
             const response = await fetch(`${this.apiUrl}${API_CONFIG.endpoints.auth.login}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({
                     email: dto.email,
                     password: dto.password,

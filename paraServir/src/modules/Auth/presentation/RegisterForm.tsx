@@ -14,24 +14,59 @@ import {
   SelectItem
 } from "@/shared/components/ui/select";
 import { Link, useNavigate } from "react-router-dom";
+import { AuthController } from "@/modules/Auth/infra/http/controllers/auth.controller";
 
 export function RegisterForm() {
+  const [fullName, setFullName] = useState("");
+  const [cedula, setCedula] = useState("");
+  const [location, setLocation] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const authController = new AuthController();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!email || !password || !role) {
-      setError("Todos los campos son obligatorios");
-      return;
+    setLoading(true);
+    try {
+      if (!email || !password || !role || !fullName || !phone || !cedula) {
+        setError("Todos los campos son obligatorios");
+        setLoading(false);
+        return;
+      }
+
+      // Sanitizar teléfono: solo dígitos
+      const phoneDigits = phone.replace(/[^\d]/g, "");
+      const cedulaDigits = cedula.replace(/[^\d]/g, "");
+
+      await authController.register({
+        email,
+        password,
+        role: role as "usuario" | "trabajador",
+        full_name: fullName,
+        phone: phoneDigits,
+        cedula: cedulaDigits,
+        location: location || null,
+        avatar_url: avatarUrl || null,
+      });
+
+      navigate("/login");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || "Error al registrar");
+      } else {
+        setError("Error al registrar");
+      }
+    } finally {
+      setLoading(false);
     }
-    alert("Registro simulado: " + email + ", rol: " + role);
-    navigate("/login");
   };
 
   return (
@@ -48,6 +83,18 @@ export function RegisterForm() {
           <Card className="p-8 shadow-none border-none">
             <form onSubmit={handleSubmit} className="space-y-5">
               {error && <Alert variant="destructive">{error}</Alert>}
+              <div>
+                <Label htmlFor="fullName" className="font-medium">Nombre completo <span className="text-red-500">*</span></Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  value={fullName}
+                  onChange={e => setFullName(e.target.value)}
+                  placeholder="Nombre y apellidos"
+                  className="mt-1"
+                  required
+                />
+              </div>
               <div>
                 <Label htmlFor="email" className="font-medium">Correo electronio <span className="text-red-500">*</span></Label>
                 <Input
@@ -85,6 +132,48 @@ export function RegisterForm() {
                   </button>
                 </div>
               </div>
+              <div>
+                <Label htmlFor="phone" className="font-medium">Teléfono <span className="text-red-500">*</span></Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="0999999999"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="cedula" className="font-medium">Cédula <span className="text-red-500">*</span></Label>
+                <Input
+                  id="cedula"
+                  type="text"
+                  value={cedula}
+                  onChange={e => setCedula(e.target.value)}
+                  placeholder="Ej: 1723456789"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="location" className="font-medium">Ubicación (opcional)</Label>
+                <Input
+                  id="location"
+                  type="text"
+                  value={location}
+                  onChange={e => setLocation(e.target.value)}
+                  placeholder="Ciudad, país"
+                />
+              </div>
+              <div>
+                <Label htmlFor="avatar" className="font-medium">Avatar URL (opcional)</Label>
+                <Input
+                  id="avatar"
+                  type="url"
+                  value={avatarUrl}
+                  onChange={e => setAvatarUrl(e.target.value)}
+                  placeholder="https://..."
+                />
+              </div>
               <div className="relative z-0">
                 <Label htmlFor="role" className="font-medium">Rol <span className="text-red-500">*</span></Label>
                 <Select value={role} onValueChange={setRole}>
@@ -98,8 +187,8 @@ export function RegisterForm() {
                 </Select>
               </div>
               <div className="mt-6">
-                <Button type="submit" className="w-full" disabled>
-                  Crear cuenta
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Creando..." : "Crear cuenta"}
                 </Button>
               </div>
               <div className="flex items-center gap-2 my-2">

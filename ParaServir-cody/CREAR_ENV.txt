@@ -1,0 +1,59 @@
+═══════════════════════════════════════════════════════════════
+  GUÍA RÁPIDA: Crear archivo .env para PostgreSQL Local
+═══════════════════════════════════════════════════════════════
+
+OPCIÓN 1: Crear manualmente
+─────────────────────────────
+
+1. Crea un archivo llamado ".env" en la raíz del proyecto
+
+2. Copia y pega este contenido (reemplaza con tus datos reales):
+
+DATABASE_URL=postgresql://postgres:TU_CONTRASEÑA@localhost:5432/paraservir
+JWT_SECRET=tu_secret_jwt_aqui_cambiar
+RESEND_API_KEY=tu_resend_key_aqui
+FRONTEND_URL=http://localhost:5173
+NODE_ENV=development
+PORT=3900
+
+3. Reemplaza:
+   - TU_CONTRASEÑA → Tu contraseña de PostgreSQL (la de pgAdmin)
+   - paraservir → El nombre exacto de tu base de datos en pgAdmin
+   - tu_secret_jwt_aqui_cambiar → Genera uno con: openssl rand -base64 32
+
+OPCIÓN 2: Usar script interactivo
+───────────────────────────────────
+
+Ejecuta: node setup-env.js
+
+Y sigue las instrucciones en pantalla.
+
+═══════════════════════════════════════════════════════════════
+  CÓMO OBTENER TUS CREDENCIALES DE pgAdmin
+═══════════════════════════════════════════════════════════════
+
+1. Abre pgAdmin
+2. Conecta a tu servidor PostgreSQL (generalmente "PostgreSQL 15" o similar)
+3. Expande "Databases" → busca tu base de datos
+4. Click derecho en tu servidor → Properties → Connection
+   - Host: generalmente "localhost" o "127.0.0.1"
+   - Port: generalmente "5432"
+   - Username: generalmente "postgres"
+   - Password: la que configuraste al instalar PostgreSQL
+
+5. El nombre de la base de datos lo ves en la lista de "Databases"
+
+═══════════════════════════════════════════════════════════════
+  EJEMPLO COMPLETO
+═══════════════════════════════════════════════════════════════
+
+Si en pgAdmin tienes:
+- Usuario: postgres
+- Contraseña: mipassword123
+- Base de datos: paraservir
+- Puerto: 5432
+
+Tu DATABASE_URL sería:
+postgresql://postgres:mipassword123@localhost:5432/paraservir
+
+═══════════════════════════════════════════════════════════════

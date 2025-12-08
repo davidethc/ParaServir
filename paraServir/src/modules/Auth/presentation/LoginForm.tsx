@@ -7,25 +7,52 @@ import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { Label } from "@/shared/components/ui/label";
 import { Alert } from "@/shared/components/ui/alert";
-import { login } from "@/Store/slices/authSlice";
+import { loginSuccess } from "@/Store/slices/authSlice";
+import { AuthController } from "@/modules/Auth/infra/http/controllers/auth.controller";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const authController = new AuthController();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!email || !password) {
-      setError("Todos los campos son obligatorios");
-      return;
+    setLoading(true);
+    try {
+      if (!email || !password) {
+        setError("Todos los campos son obligatorios");
+        setLoading(false);
+        return;
+      }
+      const resp = await authController.login({ email, password });
+      // Guardar en store
+      dispatch(loginSuccess({
+        token: resp.token,
+        user: {
+          id: resp.user.id,
+          email: resp.user.email,
+          role: resp.user.role,
+        }
+      }));
+      // Persistir token si se requiere para llamadas posteriores
+      localStorage.setItem("auth_token", resp.token);
+      localStorage.setItem("auth_user", JSON.stringify(resp.user));
+      navigate("/", { replace: true });
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || "Error al iniciar sesión");
+      } else {
+        setError("Error al iniciar sesión");
+      }
+    } finally {
+      setLoading(false);
     }
-    dispatch(login({ email, role: "user" }));
-    navigate("/", { replace: true });
   };
 
   return (
@@ -84,8 +111,8 @@ export function LoginForm() {
                   <Link to="#" className="text-gray-500 hover:underline">¿Olvidaste tu contraseña?</Link>
                 </div>
               </div>
-              <Button type="submit" className="w-full" disabled>
-                Iniciar sesión
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Ingresando..." : "Iniciar sesión"}
               </Button>
               <div className="flex items-center gap-2 my-2">
                 <div className="flex-1 h-px bg-gray-200" />

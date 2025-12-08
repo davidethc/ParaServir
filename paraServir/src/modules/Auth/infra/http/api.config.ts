@@ -8,7 +8,8 @@
  */
 
 export const API_CONFIG = {
-    baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+    // Usa VITE_API_URL para apuntar al backend; por defecto localhost:3900
+    baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3900',
     
     endpoints: {
         auth: {
