@@ -4,7 +4,6 @@ import type { LoginDto, LoginResponseDto } from "../../../application/dto/login.
 import type { RegisterDto, RegisterResponseDto } from "../../../application/dto/register.dto";
 import { API_CONFIG } from "../api.config";
 
-
 export class AuthController {
     private loginUseCase: LoginUseCase;
     private registerUseCase: RegisterUseCase;

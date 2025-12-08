@@ -1,6 +1,9 @@
 import { UserNotFoundError } from "../../../Users/Domain/errors/UserNotFoundError";
 import type { LoginDto, LoginResponseDto } from "../dto/login.dto";
 import { API_CONFIG } from "../../infra/http/api.config";
+import { simulateNetworkDelay } from "@/shared/Utils/mockData";
+
+const USE_MOCK_DATA = true; // Cambiar a false cuando el backend esté listo
 
 export class LoginUseCase {
     private apiUrl: string;
@@ -10,6 +13,37 @@ export class LoginUseCase {
     }
 
     async execute(dto: LoginDto): Promise<LoginResponseDto> {
+        // Modo mock para desarrollo
+        if (USE_MOCK_DATA) {
+            await simulateNetworkDelay(800);
+            
+            // Simular credenciales válidas
+            if (dto.email === 'test@test.com' && dto.password === 'password123') {
+                return {
+                    token: `token-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    user: {
+                        id: 'user-123',
+                        email: dto.email,
+                        role: 'usuario',
+                    },
+                };
+            }
+            
+            // Simular credenciales de trabajador
+            if (dto.email === 'worker@test.com' && dto.password === 'password123') {
+                return {
+                    token: `token-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    user: {
+                        id: 'worker-123',
+                        email: dto.email,
+                        role: 'trabajador',
+                    },
+                };
+            }
+            
+            throw new UserNotFoundError("Correo o contraseña incorrectos");
+        }
+
         try {
             // Llamada directa al backend remoto para autenticación
             const response = await fetch(`${this.apiUrl}${API_CONFIG.endpoints.auth.login}`, {
@@ -42,10 +76,26 @@ export class LoginUseCase {
                 },
             };
         } catch (error) {
+            // Manejar errores de conexión - usar mock como fallback
+            if (error instanceof TypeError && error.message.includes('fetch')) {
+                // Fallback a mock si no hay conexión
+                await simulateNetworkDelay(800);
+                return {
+                    token: `token-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    user: {
+                        id: 'user-mock',
+                        email: dto.email,
+                        role: 'usuario',
+                    },
+                };
+            }
             if (error instanceof UserNotFoundError) {
                 throw error;
             }
-            throw new Error('Failed to login');
+            if (error instanceof Error) {
+                throw error;
+            }
+            throw new Error('Error al iniciar sesión');
         }
     }
 }

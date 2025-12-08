@@ -1,5 +1,5 @@
 /**
- * Configuración de la API del backend para Workers
+ * Configuración de la API del backend para Service Categories
  * 
  * Para configurar la URL del backend, crea un archivo .env en la raíz del proyecto
  * con la siguiente variable:
@@ -11,9 +11,8 @@ export const API_CONFIG = {
     baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
     
     endpoints: {
-        workers: {
-            base: '/workers',
-            completeProfile: '/workers/complete-profile',
+        serviceCategories: {
+            getAll: '/service-categories',
         },
     },
 };

@@ -8,52 +8,84 @@ import { Card } from "@/shared/components/ui/card";
 import { Label } from "@/shared/components/ui/label";
 import { Alert } from "@/shared/components/ui/alert";
 import { login } from "@/Store/slices/authSlice";
+import { AuthController } from "@/modules/Auth/infra/http/controllers/auth.controller";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const authController = new AuthController();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    
     if (!email || !password) {
       setError("Todos los campos son obligatorios");
       return;
     }
-    dispatch(login({ email, role: "user" }));
-    navigate("/", { replace: true });
+
+    setLoading(true);
+
+    try {
+      const response = await authController.login({ email, password });
+
+      // Guardar token
+      if (response.token) {
+        localStorage.setItem("token", response.token);
+        localStorage.setItem("userId", response.user.id);
+      }
+
+      // Actualizar Redux
+      dispatch(login({
+        id: response.user.id,
+        email: response.user.email,
+        role: response.user.role,
+      }));
+
+      navigate("/", { replace: true });
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Error al iniciar sesión. Por favor intenta nuevamente.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex bg-white">
       {/* Izquierda: Formulario */}
 
-      <div className="flex-1 flex flex-col justify-between px-8 py-6 max-w-xl mx-auto mt-34 ml-44" >
+      <div className="flex-1 flex flex-col justify-between px-8 py-6 max-w-xl mx-auto mt-8" >
         <div>
           <div className="mb-8 mt-8">
             <div className="mb-2 text-2xl font-bold text-gray-800">Inicia sesión en tu cuenta</div>
+            <p className="text-sm text-gray-600">Ingresa tus credenciales para acceder a tu cuenta</p>
           </div>
-          <Card className="p-8 shadow-none border-none">
+          <Card className="p-8 shadow-lg border-2 border-blue-500 bg-white">
             <form onSubmit={handleSubmit} className="space-y-5">
               {error && <Alert variant="destructive">{error}</Alert>}
               <div>
-                <Label htmlFor="email" className="font-medium">Correo electrónico <span className="text-red-500">*</span></Label>
+                <Label htmlFor="email" className="font-medium text-gray-700">Correo electrónico <span className="text-red-500">*</span></Label>
                 <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="Ingresa tu correo electrónico registrado"
-                  className="mt-1"
+                  className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="password" className="font-medium">Contraseña <span className="text-red-500">*</span></Label>
+                <Label htmlFor="password" className="font-medium text-gray-700">Contraseña <span className="text-red-500">*</span></Label>
                 <div className="relative mt-1">
                   <Input
                     id="password"
@@ -61,11 +93,12 @@ export function LoginForm() {
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="Ingresa tu contraseña"
+                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                     required
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-600"
                     tabIndex={-1}
                     onClick={() => setShowPassword((v) => !v)}
                   >
@@ -77,28 +110,32 @@ export function LoginForm() {
                   </button>
                 </div>
                 <div className="flex items-center justify-between mt-2 text-sm">
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" className="accent-primary" />
+                  <label className="flex items-center gap-2 text-gray-700">
+                    <input type="checkbox" className="accent-blue-500" />
                     Recuérdame
                   </label>
-                  <Link to="#" className="text-gray-500 hover:underline">¿Olvidaste tu contraseña?</Link>
+                  <Link to="/forgot-password" className="text-blue-600 hover:text-blue-700 hover:underline font-medium">¿Olvidaste tu contraseña?</Link>
                 </div>
               </div>
-              <Button type="submit" className="w-full" disabled>
-                Iniciar sesión
+              <Button 
+                type="submit" 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2"
+                disabled={loading}
+              >
+                {loading ? "Iniciando sesión..." : "Iniciar sesión"}
               </Button>
               <div className="flex items-center gap-2 my-2">
                 <div className="flex-1 h-px bg-gray-200" />
                 <span className="text-gray-400 text-xs">O ingresa con</span>
                 <div className="flex-1 h-px bg-gray-200" />
               </div>
-              <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2">
+              <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2 border-gray-300 hover:border-blue-500 hover:bg-blue-50 text-gray-700">
                 <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="h-5 w-5" />
                 Google
               </Button>
-              <div className="text-center text-sm mt-2">
+              <div className="text-center text-sm mt-2 text-gray-600">
                 ¿No tienes cuenta?{' '}
-                <Link to="/register" className="text-red-500 hover:underline font-medium">Regístrate</Link>
+                <Link to="/register" className="text-blue-600 hover:text-blue-700 hover:underline font-medium">Regístrate</Link>
               </div>
             </form>
           </Card>

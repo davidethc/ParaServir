@@ -1,13 +1,20 @@
 export interface RegisterDto {
     email: string;
     password: string;
-    role?: 'usuario' | 'trabajador' | 'admin';
+    firstName: string;
+    lastName: string;
+    cedula: string;
+    phone: string;
+    location: string;
+    avatar_url?: string | null;
+    role: 'usuario' | 'trabajador' | 'admin';
 }
 
 export interface RegisterResponseDto {
-    id: string;
+    userId: string;
     email: string;
     role: string;
-    isVerified: boolean;
+    token?: string;
+    nextStep?: 'complete_worker_profile' | null;
 }
 
