@@ -1,16 +1,20 @@
+// import pkg from "pg";
+// const { Pool } = pkg;
+
+// const isProduction = process.env.NODE_ENV === "production";
+
+// export const pool = new Pool({
+//   connectionString: process.env.DATABASE_URL,
+//   ssl: isProduction ? { rejectUnauthorized: false } : false
+// });
+
+
 import pg from 'pg';
 
-let pool;
-
-if (!globalThis._pool) {
-  globalThis._pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false
-    }
-  });
-}
-
-pool = globalThis._pool;
-
-export { pool };
+export const pool=new pg.Pool({
+    user: "postgres",
+    host: "localhost",
+    password: "admin123",
+    database: "paraservir",
+    port: "5432"
+})

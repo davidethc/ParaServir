@@ -1,10 +1,5 @@
 import { pool } from "../db.js";
 
-/**
- * Verifica si ya existe un usuario con el email proporcionado
- * @param {string} email - El email a verificar
- * @returns {Promise<boolean>} - true si existe, false si no
- */
 export async function checkDuplicateEmail(email) {
   try {
     const query = `

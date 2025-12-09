@@ -1,5 +1,3 @@
-// middlewares/auth.js
-
 import moment from "moment";
 import jwt from "jwt-simple";
 import { secret } from "../helpers/jwt.js";
@@ -16,7 +14,7 @@ export const auth = (req, res, next) => {
         } else {
             return res.status(403).json({
                 status: "error",
-                message: "La petición no tiene token de autenticación (cookie o cabecera)."
+                message: "La petición no tiene token de autenticación."
             });
         }
     }

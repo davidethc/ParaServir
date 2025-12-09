@@ -13,14 +13,13 @@ export const list = async (req, res) => {
             FROM public.profiles p
             INNER JOIN public.users u
             ON p.user_id = u.id
-            WHERE u.role = 'client';`);
+            WHERE u.role = 'usuario';`);
         if (!rows || rows.length === 0) {
             return res.status(404).json({
                 status: "error",
                 mensaje: "No se encontraron usuarios"
             });
         }
-        console.log(rows);
         return res.status(200).json({
             status: 'success',
             rows
@@ -98,7 +97,7 @@ export const createUser = async (req, res) => {
 
         const { user, worker } = normalizeUserInput(req.body);
 
-        // Verificar si el email ya existe
+        // Verificar si el email ya existe en la bd
         const emailExists = await checkDuplicateEmail(user.email);
         if (emailExists) {
             await client.query('ROLLBACK');
@@ -110,8 +109,7 @@ export const createUser = async (req, res) => {
 
         // Encriptar contraseña
         const passwordHash = await bcrypt.hash(user.password, 10);
-
-        // Insertar en la base de datos
+        // Insertar en la base de datos primero para obtener el id real
         const insertUser = await client.query(
             `INSERT INTO users (email, password_hash, role)
             VALUES ($1, $2, $3)
@@ -122,16 +120,15 @@ export const createUser = async (req, res) => {
         const newUser = insertUser.rows[0];
 
         await client.query(
-            `INSERT INTO profiles (user_id, first_name, last_name, cedula, phone, location, avatar_url)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            `INSERT INTO profiles (user_id, first_name, last_name, cedula, phone, location)
+            VALUES ($1, $2, $3, $4, $5, $6)`,
             [
                 newUser.id,
                 user.first_name,
                 user.last_name,
                 user.cedula || null,
                 user.phone,
-                user.location || null,
-                user.avatar_url || null
+                user.location || null
             ]
         );
 
@@ -144,21 +141,21 @@ export const createUser = async (req, res) => {
         await client.query('COMMIT');
 
         // Generar token de verificación y enlace (usando id real)
-        const verificationToken = createToken({ id: newUser.id, email: newUser.email });
+        const verificationToken = createToken({ id: newUser.id, email: newUser.email, role: newUser.role });
         const verificationLink = `http://localhost:3900/auth/verify-email?token=${verificationToken}`;
 
         // Intentar enviar email de verificación, pero no revertir la creación si falla
         try {
             await sendVerificationEmail(newUser.email, verificationLink);
         } catch (mailErr) {
-            console.error('No se pudo enviar email de verificación:', mailErr.message || mailErr);
+            console.error('No se pudo enviar email de verificación:', mailErr && mailErr.message ? mailErr.message : mailErr);
         }
 
         // Log the verification link so it can be used during testing if email delivery fails
         console.log('Verification link:', verificationLink);
 
-        // Generar token de sesión y devolverlo
-        const sessionToken = createToken({ id: newUser.id, email: newUser.email });
+        // Generar token de sesión y devolverlo (incluyendo role)
+        const sessionToken = createToken({ id: newUser.id, email: newUser.email, role: newUser.role });
 
         // Enviar cookie HTTP-only (opcional)
         try {
@@ -170,7 +167,7 @@ export const createUser = async (req, res) => {
             });
         } catch (cookieErr) {
             // Si no se puede setear cookie, seguir devolviendo token en body
-            console.error('No se pudo setear cookie de sesión:', cookieErr.message || cookieErr);
+            console.error('No se pudo setear cookie de sesión:', cookieErr && cookieErr.message ? cookieErr.message : cookieErr);
         }
 
         return res.status(201).json({
@@ -223,7 +220,8 @@ export const update = async (req, res) => {
             `UPDATE users
              SET email = $1,
                  password_hash = $2,
-                 role = $3
+                 role = $3,
+                 updated_at = NOW()
              WHERE id = $4
              RETURNING *`,
             [
@@ -244,7 +242,8 @@ export const update = async (req, res) => {
                  cedula = $3,
                  phone = $4,
                  location = $5,
-                 avatar_url = $6
+                 avatar_url = $6,
+                 updated_at = NOW()
              WHERE user_id = $7`,
             [
                 user.first_name,

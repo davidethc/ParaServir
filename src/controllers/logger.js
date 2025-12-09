@@ -17,7 +17,7 @@ export const login = async (req, res) => {
 
         // Buscar usuario en PostgreSQL
         const result = await pool.query(
-            `SELECT id, email, password_hash
+            `SELECT id, email, password_hash, role
              FROM users
              WHERE email = $1`,
             [email.toLowerCase()]
@@ -41,15 +41,28 @@ export const login = async (req, res) => {
             });
         }
 
-        // Generar token
-        const token = createToken(user);
+        // Generar token (incluye role)
+        const token = createToken({ id: user.id, email: user.email, role: user.role });
+
+        // Opcional: setear cookie HTTP-only con token
+        try {
+            res.cookie('access_token', token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 48 * 60 * 60 * 1000 // 48 horas
+            });
+        } catch (cookieErr) {
+            console.error('No se pudo setear cookie de sesión:', cookieErr && cookieErr.message ? cookieErr.message : cookieErr);
+        }
 
         return res.status(200).json({
             status: "success",
             message: "Bienvenido",
             user: {
                 id: user.id,
-                email: user.email
+                email: user.email,
+                role: user.role
             },
             token
         });

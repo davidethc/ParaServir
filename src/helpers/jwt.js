@@ -15,6 +15,7 @@ export const createToken = (user) => {
     const payload = {
         id: user.id || null,
         email: user.email.toLowerCase(),
+        role: user.role,
 
         // Fecha de creación
         iat: moment().unix(),

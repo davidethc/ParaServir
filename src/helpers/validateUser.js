@@ -9,8 +9,6 @@ export function validateUserData(body) {
   const role = (body.role || "").trim().toLowerCase();
   const location = (body.location || "").trim();
   const cedula = (body.cedula || "").trim();
-  const avatar_url = (body.avatar_url || body.avatar || "").trim();
-
   if (validator.isEmpty(rawFull)) {
     throw new Error("El nombre no puede estar vacío.");
   }
@@ -59,6 +57,5 @@ export function validateUserData(body) {
     password,
     role,
     location: location || null,
-    avatar_url: avatar_url || null,
   };
 };

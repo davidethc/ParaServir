@@ -1,14 +1,15 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express, { Router } from 'express';
 import { port } from './src/config.js';
 import cookieParser from 'cookie-parser';
 import UserRoutes from './src/routes/user.js';
 import WorkerRoutes from './src/routes/worker.js';
 import LoggerRoutes from './src/routes/logger.js';
+import ServiceRoutes from './src/routes/service.js';
 import morgan from "morgan";
-import dotenv from 'dotenv';
 
-
-dotenv.config();
 
 const app = express();
 
@@ -28,13 +29,14 @@ app.use(cookieParser());
 app.use('/users', UserRoutes);
 app.use('/workers', WorkerRoutes);
 app.use('/auth', LoggerRoutes)
+app.use('/services', ServiceRoutes);
 
 
 // Iniciar dentro del entrono de desarrollo
 
-// app.listen(port);
-// console.log('Servidor corriendo en el puerto ' + port);
+app.listen(port);
+console.log('Servidor corriendo en el puerto ' + port);
 
 // Para que vercel ejecute el servidor
 
-module.exports = app;
+// module.exports = app;

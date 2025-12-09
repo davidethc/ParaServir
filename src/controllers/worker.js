@@ -1,10 +1,11 @@
 import { pool } from "../db.js";
-import {validateWorkerData} from "../helpers/validateWorker.js";
+import { validateWorkerData } from "../helpers/validateWorker.js";
 
 export async function createWorker(client, userId, worker) {
     try {
         const result = await client.query(
-            `INSERT INTO worker_profiles (user_id, years_experience, certification_url, verification_status, is_active)
+            `INSERT INTO worker_profiles 
+                (user_id, years_experience, certification_url, verification_status, is_active)
              VALUES ($1, $2, $3, $4, $5)
              RETURNING *`,
             [
@@ -12,61 +13,21 @@ export async function createWorker(client, userId, worker) {
                 worker.years_experience,
                 worker.certification_url,
                 worker.verification_status || 'pending',
-                worker.is_active == null ? true : worker.is_active
+                worker.is_active ?? true
             ]
         );
 
         const workerProfile = result.rows[0];
 
-        // Si se envían datos del servicio, crear también un servicio vinculado
-        let createdService = null;
-        const svc = worker.service;
-        if (svc) {
-            // Determinar category_id: usar category_id si viene, o buscar por nombre
-            let categoryId = svc.category_id || null;
-            if (!categoryId && svc.category_name) {
-                const catRes = await client.query(
-                    `SELECT id FROM service_categories WHERE LOWER(name) = LOWER($1) LIMIT 1`,
-                    [svc.category_name]
-                );
-                if (catRes.rowCount === 0) {
-                    throw new Error(`Categoría no encontrada: ${svc.category_name}`);
-                }
-                categoryId = catRes.rows[0].id;
-            }
-
-            if (!categoryId) {
-                throw new Error('Se requiere category_id o category_name para crear el servicio');
-            }
-
-            // Título obligatorio para crear el servicio
-            const title = svc.title || svc.service_title;
-            if (!title) {
-                throw new Error('Se requiere un título para el servicio del trabajador');
-            }
-
-            const description = svc.description || svc.service_description || null;
-            const basePrice = svc.base_price != null ? svc.base_price : null;
-
-            const svcRes = await client.query(
-                `INSERT INTO worker_services (worker_id, category_id, title, description, base_price)
-                 VALUES ($1, $2, $3, $4, $5)
-                 RETURNING *`,
-                [userId, categoryId, title, description, basePrice]
-            );
-
-            createdService = svcRes.rows[0];
-        }
-
         return {
-            profile: workerProfile,
-            service: createdService,
+            profile: workerProfile
         };
 
     } catch (error) {
         throw new Error("Error al crear el perfil de empleado: " + error.message);
     }
 }
+
 
 export async function list(req, res) {
     try {

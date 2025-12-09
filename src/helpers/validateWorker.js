@@ -9,8 +9,7 @@ export function validateWorkerData(data) {
     // Opcional: datos del servicio que ofrece el trabajador
     const service_title = (data.service_title || data.title || "").trim();
     const service_description = (data.service_description || data.description || "").trim();
-    const category_id = (data.category_id || null);
-    const category_name = (data.category_name || "").trim();
+    const category_id = (data.category_id || "").trim(); // Nombre de categoría (string)
     const base_price = data.base_price != null ? Number(data.base_price) : null;
 
     if (!Number.isInteger(years_experience) || years_experience < 0) {
@@ -31,16 +30,12 @@ export function validateWorkerData(data) {
         throw new Error("La descripción del servicio es demasiado corta");
     }
 
-    if (base_price != null && (isNaN(base_price) || base_price < 0)) {
-        throw new Error("El precio base del servicio no es válido");
+    if (category_id && typeof category_id !== 'string') {
+        throw new Error("El category_id debe ser un string con el nombre de la categoría");
     }
 
-    // Si se proporciona category_id, podría validarse como UUID simple
-    if (category_id && typeof category_id === 'string') {
-        // simple check: longitud y guiones
-        if (!/^[0-9a-fA-F-]{36}$/.test(category_id)) {
-            throw new Error("El category_id no tiene formato UUID válido");
-        }
+    if (base_price != null && (isNaN(base_price) || base_price < 0)) {
+        throw new Error("El precio base del servicio no es válido");
     }
 
     return {
@@ -49,11 +44,10 @@ export function validateWorkerData(data) {
         verification_status: verification_status || "pending",
         is_active,
         // datos opcionales del servicio
-        service: service_title || service_description || category_id || category_name || base_price ? {
+        service: service_title || service_description || category_id || base_price ? {
             title: service_title || null,
             description: service_description || null,
             category_id: category_id || null,
-            category_name: category_name || null,
             base_price: base_price,
         } : null,
     };
