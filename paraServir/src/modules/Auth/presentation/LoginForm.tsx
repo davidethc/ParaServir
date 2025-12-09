@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
@@ -149,7 +148,7 @@ export function LoginForm() {
       {/* Derecha: Logo */}
       <div className="hidden md:flex flex-1 items-center justify-center bg-white">
           <img 
-           src="src/shared/Assets/logo_servir.png" 
+           src="/src/shared/Assets/logo_servir.png" 
            alt="Logo ParaServir" 
            className="w-[620px] h-[620px] object-contain mx-auto mb-94"
            style={{ minWidth: 520, minHeight: 520 }}
