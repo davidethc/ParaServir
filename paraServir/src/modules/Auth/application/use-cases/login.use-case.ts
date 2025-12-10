@@ -1,23 +1,25 @@
 import { UserNotFoundError } from "../../../Users/Domain/errors/UserNotFoundError";
 import type { LoginDto, LoginResponseDto } from "../dto/login.dto";
 import { API_CONFIG } from "../../infra/http/api.config";
-import { simulateNetworkDelay } from "@/shared/Utils/mockData";
+import { HttpClientService } from "@/shared/services/http-client.service";
+import { mapLoginResponse } from "@/shared/Utils/dto-mapper";
 
-const USE_MOCK_DATA = true; // Cambiar a false cuando el backend esté listo
+const USE_MOCK_DATA = false; // Conectado al backend real
 
 export class LoginUseCase {
-    private apiUrl: string;
+    private httpClient: HttpClientService;
 
     constructor(apiUrl?: string) {
-        this.apiUrl = apiUrl || API_CONFIG.baseUrl;
+        const baseUrl = apiUrl || API_CONFIG.baseUrl;
+        this.httpClient = new HttpClientService({ baseUrl });
     }
 
     async execute(dto: LoginDto): Promise<LoginResponseDto> {
-        // Modo mock para desarrollo
+        // Modo mock para desarrollo (solo si USE_MOCK_DATA = true)
         if (USE_MOCK_DATA) {
+            const { simulateNetworkDelay } = await import("@/shared/Utils/mockData");
             await simulateNetworkDelay(800);
             
-            // Simular credenciales válidas
             if (dto.email === 'test@test.com' && dto.password === 'password123') {
                 return {
                     token: `token-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -29,7 +31,6 @@ export class LoginUseCase {
                 };
             }
             
-            // Simular credenciales de trabajador
             if (dto.email === 'worker@test.com' && dto.password === 'password123') {
                 return {
                     token: `token-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -45,54 +46,28 @@ export class LoginUseCase {
         }
 
         try {
-            // Llamada directa al backend remoto para autenticación
-            const response = await fetch(`${this.apiUrl}${API_CONFIG.endpoints.auth.login}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: dto.email,
-                    password: dto.password,
-                }),
+            // Llamada al backend real
+            const backendResponse = await this.httpClient.post<{
+                status?: string;
+                message?: string;
+                user?: { id: string; email: string; role: string };
+                token?: string;
+            }>(API_CONFIG.endpoints.auth.login, {
+                email: dto.email,
+                password: dto.password,
             });
 
-            if (response.status === 401 || response.status === 404) {
-                throw new UserNotFoundError("Invalid email or password");
-            }
-
-            if (!response.ok) {
-                const error = await response.json().catch(() => ({ message: 'Login failed' }));
-                throw new Error(error.message || 'Login failed');
-            }
-
-            const data = await response.json();
-            
-            // El backend puede devolver el token y user en diferentes formatos
-            return {
-                token: data.token || data.access_token || data.accessToken,
-                user: {
-                    id: data.user?.id || data.id,
-                    email: data.user?.email || data.email,
-                    role: data.user?.role || data.role,
-                },
-            };
+            // Mapear respuesta del backend al formato del frontend
+            return mapLoginResponse(backendResponse);
         } catch (error) {
-            // Manejar errores de conexión - usar mock como fallback
-            if (error instanceof TypeError && error.message.includes('fetch')) {
-                // Fallback a mock si no hay conexión
-                await simulateNetworkDelay(800);
-                return {
-                    token: `token-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                    user: {
-                        id: 'user-mock',
-                        email: dto.email,
-                        role: 'usuario',
-                    },
-                };
-            }
-            if (error instanceof UserNotFoundError) {
-                throw error;
-            }
+            // Manejar errores específicos
             if (error instanceof Error) {
+                // Si es error de credenciales
+                if (error.message.includes('Credenciales incorrectas') || 
+                    error.message.includes('Invalid email') ||
+                    error.message.includes('password')) {
+                    throw new UserNotFoundError("Correo o contraseña incorrectos");
+                }
                 throw error;
             }
             throw new Error('Error al iniciar sesión');

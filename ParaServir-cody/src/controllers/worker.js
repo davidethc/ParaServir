@@ -312,3 +312,199 @@ export async function updateWorker(client, userId, worker) {
         throw new Error("Error al actualizar el perfil de empleado: " + error.message);
     }
 }
+
+// Obtener servicios de un trabajador
+export async function getWorkerServices(req, res) {
+    try {
+        const { id } = req.params;
+
+        const { rows } = await pool.query(
+            `SELECT ws.id, ws.title, ws.description, ws.base_price, 
+                    ws.is_available, ws.created_at, ws.updated_at,
+                    sc.id as category_id, sc.name as category_name, sc.icon as category_icon
+             FROM worker_services ws
+             INNER JOIN service_categories sc ON ws.category_id = sc.id
+             WHERE ws.worker_id = $1
+             ORDER BY ws.created_at DESC`,
+            [id]
+        );
+
+        return res.status(200).json({
+            status: 'success',
+            services: rows
+        });
+    } catch (error) {
+        return res.status(500).json({
+            status: 'error',
+            message: 'Error al obtener los servicios',
+            error: error.message
+        });
+    }
+}
+
+// Actualizar un servicio
+export async function updateService(req, res) {
+    const userId = req.user?.id;
+    if (!userId) {
+        return res.status(401).json({ status: "error", message: "No autenticado" });
+    }
+
+    const { id } = req.params;
+    const { title, description, base_price, is_available, category_id, category_name } = req.body;
+
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+
+        // Verificar que el servicio pertenece al trabajador autenticado
+        const serviceCheck = await client.query(
+            "SELECT worker_id FROM worker_services WHERE id = $1",
+            [id]
+        );
+
+        if (serviceCheck.rowCount === 0) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({
+                status: "error",
+                message: "Servicio no encontrado"
+            });
+        }
+
+        if (serviceCheck.rows[0].worker_id !== userId) {
+            await client.query("ROLLBACK");
+            return res.status(403).json({
+                status: "error",
+                message: "No tienes permisos para actualizar este servicio"
+            });
+        }
+
+        // Resolver category_id si viene category_name
+        let finalCategoryId = category_id;
+        if (!finalCategoryId && category_name) {
+            const catRes = await client.query(
+                `SELECT id FROM service_categories WHERE LOWER(name) = LOWER($1) LIMIT 1`,
+                [category_name]
+            );
+            if (catRes.rowCount === 0) {
+                await client.query("ROLLBACK");
+                return res.status(400).json({
+                    status: "error",
+                    message: `Categoría no encontrada: ${category_name}`
+                });
+            }
+            finalCategoryId = catRes.rows[0].id;
+        }
+
+        // Construir query de actualización dinámicamente
+        const updates = [];
+        const values = [];
+        let paramIndex = 1;
+
+        if (title !== undefined) {
+            updates.push(`title = $${paramIndex++}`);
+            values.push(title);
+        }
+        if (description !== undefined) {
+            updates.push(`description = $${paramIndex++}`);
+            values.push(description);
+        }
+        if (base_price !== undefined) {
+            updates.push(`base_price = $${paramIndex++}`);
+            values.push(base_price);
+        }
+        if (is_available !== undefined) {
+            updates.push(`is_available = $${paramIndex++}`);
+            values.push(is_available);
+        }
+        if (finalCategoryId !== undefined) {
+            updates.push(`category_id = $${paramIndex++}`);
+            values.push(finalCategoryId);
+        }
+
+        if (updates.length === 0) {
+            await client.query("ROLLBACK");
+            return res.status(400).json({
+                status: "error",
+                message: "No se proporcionaron campos para actualizar"
+            });
+        }
+
+        updates.push(`updated_at = NOW()`);
+        values.push(id);
+
+        const updateQuery = `
+            UPDATE worker_services 
+            SET ${updates.join(', ')}
+            WHERE id = $${paramIndex}
+            RETURNING *
+        `;
+
+        const result = await client.query(updateQuery, values);
+
+        await client.query("COMMIT");
+
+        return res.status(200).json({
+            status: "success",
+            message: "Servicio actualizado",
+            service: result.rows[0]
+        });
+    } catch (error) {
+        try { await client.query("ROLLBACK"); } catch (_) {}
+        return res.status(400).json({
+            status: "error",
+            message: "No se pudo actualizar el servicio",
+            error: error.message
+        });
+    } finally {
+        client.release();
+    }
+}
+
+// Eliminar un servicio
+export async function deleteService(req, res) {
+    const userId = req.user?.id;
+    if (!userId) {
+        return res.status(401).json({ status: "error", message: "No autenticado" });
+    }
+
+    const { id } = req.params;
+
+    try {
+        // Verificar que el servicio pertenece al trabajador autenticado
+        const serviceCheck = await pool.query(
+            "SELECT worker_id FROM worker_services WHERE id = $1",
+            [id]
+        );
+
+        if (serviceCheck.rowCount === 0) {
+            return res.status(404).json({
+                status: "error",
+                message: "Servicio no encontrado"
+            });
+        }
+
+        if (serviceCheck.rows[0].worker_id !== userId) {
+            return res.status(403).json({
+                status: "error",
+                message: "No tienes permisos para eliminar este servicio"
+            });
+        }
+
+        const result = await pool.query(
+            "DELETE FROM worker_services WHERE id = $1 RETURNING id",
+            [id]
+        );
+
+        return res.status(200).json({
+            status: "success",
+            message: "Servicio eliminado correctamente",
+            deleted_id: result.rows[0].id
+        });
+    } catch (error) {
+        return res.status(500).json({
+            status: "error",
+            message: "Error al eliminar el servicio",
+            error: error.message
+        });
+    }
+}

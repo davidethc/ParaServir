@@ -1,49 +1,50 @@
 import type { ServiceCategoryDto } from "../dto/service-category.dto";
 import { API_CONFIG } from "../../infra/http/api.config";
-import { MOCK_SERVICE_CATEGORIES, simulateNetworkDelay } from "@/shared/Utils/mockData";
+import { HttpClientService } from "@/shared/services/http-client.service";
 
-const USE_MOCK_DATA = true; // Cambiar a false cuando el backend esté listo
+const USE_MOCK_DATA = false; // Conectado al backend real
 
 export class GetServiceCategoriesUseCase {
-    private apiUrl: string;
+    private httpClient: HttpClientService;
 
     constructor(apiUrl?: string) {
-        this.apiUrl = apiUrl || API_CONFIG.baseUrl;
+        const baseUrl = apiUrl || API_CONFIG.baseUrl;
+        this.httpClient = new HttpClientService({ baseUrl });
     }
 
     async execute(): Promise<ServiceCategoryDto[]> {
-        // Modo mock para desarrollo
+        // Modo mock para desarrollo (solo si USE_MOCK_DATA = true)
         if (USE_MOCK_DATA) {
+            const { MOCK_SERVICE_CATEGORIES, simulateNetworkDelay } = await import("@/shared/Utils/mockData");
             await simulateNetworkDelay(500);
             return MOCK_SERVICE_CATEGORIES;
         }
 
         try {
-            const response = await fetch(`${this.apiUrl}${API_CONFIG.endpoints.serviceCategories.getAll}`, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-            });
+            // Llamada al backend real
+            const backendResponse = await this.httpClient.get<{
+                status?: string;
+                rows?: Array<{
+                    id: string;
+                    name: string;
+                    description?: string;
+                    icon?: string;
+                }>;
+            }>(API_CONFIG.endpoints.serviceCategories.getAll);
 
-            if (!response.ok) {
-                const error = await response.json().catch(() => ({ message: 'Failed to fetch categories' }));
-                throw new Error(error.message || 'Failed to fetch service categories');
-            }
+            // El backend devuelve: { status: "success", rows: [...] }
+            const categories = backendResponse.rows || [];
 
-            const data = await response.json();
-            
-            // El backend puede devolver un array directamente o dentro de un objeto
-            if (Array.isArray(data)) {
-                return data;
-            }
-            
-            return data.categories || data.data || [];
+            // Mapear respuesta del backend al formato del frontend
+            return categories.map((cat) => ({
+                id: cat.id,
+                name: cat.name,
+                description: cat.description || undefined,
+                icon: cat.icon || undefined,
+                // jobCount no viene del backend, se puede calcular después si es necesario
+            }));
         } catch (error) {
-            // Manejar errores de conexión - usar mock como fallback
-            if (error instanceof TypeError && error.message.includes('fetch')) {
-                // Fallback a mock si no hay conexión
-                await simulateNetworkDelay(500);
-                return MOCK_SERVICE_CATEGORIES;
-            }
+            // Manejar errores específicos
             if (error instanceof Error) {
                 throw error;
             }

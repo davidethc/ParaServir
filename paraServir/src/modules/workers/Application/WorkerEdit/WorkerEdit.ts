@@ -1,4 +1,4 @@
-import { Worker } from "../../Domain/entities/Worker";
+// Worker se usa implícitamente a través de worker.updateExperience(), worker.verify(), etc.
 import { WorkerNotFoundError } from "../../Domain/errors/WorkerNotFoundError";
 import { WorkerVerificationStatus } from "../../Domain/value-objects/WorkerVerificationStatus";
 import type { WorkerRepository } from "../../Domain/repositories/WorkerRepository";

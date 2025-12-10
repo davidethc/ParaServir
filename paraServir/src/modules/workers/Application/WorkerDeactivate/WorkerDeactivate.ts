@@ -1,4 +1,4 @@
-import { Worker } from "../../Domain/entities/Worker";
+// Worker se usa implícitamente a través de worker.deactivate()
 import { WorkerNotFoundError } from "../../Domain/errors/WorkerNotFoundError";
 import type { WorkerRepository } from "../../Domain/repositories/WorkerRepository";
 

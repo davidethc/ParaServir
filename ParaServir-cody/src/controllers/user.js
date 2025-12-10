@@ -6,6 +6,61 @@ import { normalizeUserInput } from "../helpers/normalizeUser.js";
 import { sendVerificationEmail } from "../helpers/mail.js";
 import { createToken } from "../helpers/jwt.js";
 
+export const getMe = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        
+        if (!userId) {
+            return res.status(401).json({
+                status: "error",
+                message: "No autenticado"
+            });
+        }
+
+        const { rows } = await pool.query(
+            `SELECT u.id, u.email, u.role, u.is_verified, u.created_at,
+                    p.first_name, p.last_name, p.cedula, p.phone, 
+                    p.location, p.avatar_url
+             FROM users u
+             INNER JOIN profiles p ON u.id = p.user_id
+             WHERE u.id = $1`,
+            [userId]
+        );
+
+        if (!rows || rows.length === 0) {
+            return res.status(404).json({
+                status: "error",
+                message: "Usuario no encontrado"
+            });
+        }
+
+        // Si es trabajador, incluir información del perfil profesional
+        let userData = rows[0];
+        if (userData.role === 'trabajador') {
+            const workerProfile = await pool.query(
+                `SELECT years_experience, certification_url, verification_status, is_active
+                 FROM worker_profiles
+                 WHERE user_id = $1`,
+                [userId]
+            );
+            if (workerProfile.rows.length > 0) {
+                userData.worker_profile = workerProfile.rows[0];
+            }
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            user: userData
+        });
+    } catch (error) {
+        return res.status(500).json({
+            status: 'error',
+            message: 'Error al obtener el perfil',
+            error: error.message
+        });
+    }
+};
+
 export const list = async (req, res) => {
     try {
         const { rows } = await pool.query(

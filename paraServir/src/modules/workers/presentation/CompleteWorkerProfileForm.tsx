@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { ROUTES } from "@/shared/constants/routes.constants";
+import { AuthStorageService } from "@/shared/services/auth-storage.service";
 import { Input } from "@/shared/components/ui/input";
 import { Select } from "@/shared/components/ui/select";
 import { Button } from "@/shared/components/ui/button";
@@ -29,9 +31,9 @@ export function CompleteWorkerProfileForm() {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Obtener userId y token de múltiples fuentes
-  const userId = location.state?.userId || localStorage.getItem("userId") || "";
-  const token = location.state?.token || localStorage.getItem("token") || "";
+  // Obtener userId y token usando servicio centralizado
+  const userId = location.state?.userId || AuthStorageService.getUserId() || "";
+  const token = location.state?.token || AuthStorageService.getToken() || "";
 
   const [yearsExperience, setYearsExperience] = useState("");
   const [certificationUrl, setCertificationUrl] = useState("");
@@ -47,12 +49,12 @@ export function CompleteWorkerProfileForm() {
 
   useEffect(() => {
     // Intentar obtener userId y token de diferentes fuentes
-    const finalUserId = userId || location.state?.userId || localStorage.getItem("userId") || "";
-    const finalToken = token || location.state?.token || localStorage.getItem("token") || "";
+    const finalUserId = userId || location.state?.userId || AuthStorageService.getUserId() || "";
+    const finalToken = token || location.state?.token || AuthStorageService.getToken() || "";
 
     if (!finalUserId || !finalToken) {
       console.error("Missing userId or token:", { finalUserId, finalToken });
-      navigate("/register", { replace: true });
+      navigate(ROUTES.PUBLIC.REGISTER, { replace: true });
       return;
     }
 
@@ -137,12 +139,12 @@ export function CompleteWorkerProfileForm() {
 
     try {
       // Asegurar que tenemos userId y token
-      const finalUserId = userId || location.state?.userId || localStorage.getItem("userId") || "";
-      const finalToken = token || location.state?.token || localStorage.getItem("token") || "";
+      const finalUserId = userId || location.state?.userId || AuthStorageService.getUserId() || "";
+      const finalToken = token || location.state?.token || AuthStorageService.getToken() || "";
 
       if (!finalUserId || !finalToken) {
         setError("Error de autenticación. Por favor inicia sesión nuevamente.");
-        navigate("/login");
+        navigate(ROUTES.PUBLIC.LOGIN);
         return;
       }
 
@@ -161,7 +163,7 @@ export function CompleteWorkerProfileForm() {
       }, finalToken);
 
       // Redirigir a home o dashboard
-      navigate("/", { replace: true });
+      navigate(ROUTES.PUBLIC.HOME, { replace: true });
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -348,7 +350,7 @@ export function CompleteWorkerProfileForm() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate(ROUTES.PUBLIC.HOME)}
                   className="flex-1"
                 >
                   Completar Después

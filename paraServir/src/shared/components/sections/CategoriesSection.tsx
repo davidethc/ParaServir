@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { buildRoute } from "@/shared/constants/routes.constants";
 import { CategoryGrid } from "./CategoryGrid";
 import { ServiceCategoryController } from "@/modules/ServiceCategories/infra/http/controllers/service-category.controller";
 import type { ServiceCategoryDto } from "@/modules/ServiceCategories/application/dto/service-category.dto";
@@ -31,8 +32,8 @@ export function CategoriesSection() {
   }, []);
 
   const handleCategoryClick = (categoryId: string) => {
-    // Por ahora navega a home con query param, en el futuro puede ir a página de búsqueda filtrada
-    navigate(`/?category=${categoryId}`);
+    // Navegar a la página de detalle de categoría
+    navigate(buildRoute.categoryDetail(categoryId));
   };
 
   return (

@@ -4,15 +4,15 @@ export interface JwtService {
 }
 
 export class JwtServiceImpl implements JwtService {
-    private secret: string;
-
     constructor(secret: string = 'your-secret-key') {
-        this.secret = secret;
+        // Nota: secret se recibirá pero no se guarda porque actualmente usamos btoa/atob como placeholder
+        // Cuando se implemente jwt real con jsonwebtoken, se guardará: this.secret = secret;
+        void secret; // Marcar como usado intencionalmente para evitar warning
     }
 
     sign(payload: { id: string; email: string; role: string }): string {
         // En producción, usarías jsonwebtoken o jose
-        // return jwt.sign(payload, this.secret, { expiresIn: '24h' });
+        // return jwt.sign(payload, this._secret, { expiresIn: '24h' });
         
         // Placeholder para desarrollo
         const token = btoa(JSON.stringify(payload));
@@ -21,7 +21,7 @@ export class JwtServiceImpl implements JwtService {
 
     verify(token: string): { id: string; email: string; role: string } {
         // En producción, usarías jwt.verify()
-        // return jwt.verify(token, this.secret) as { id: string; email: string; role: string };
+        // return jwt.verify(token, this._secret) as { id: string; email: string; role: string };
         
         // Placeholder para desarrollo
         try {

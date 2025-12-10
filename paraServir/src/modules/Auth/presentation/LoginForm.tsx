@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
+import { ROUTES } from "@/shared/constants/routes.constants";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
@@ -8,6 +9,7 @@ import { Label } from "@/shared/components/ui/label";
 import { Alert } from "@/shared/components/ui/alert";
 import { login } from "@/Store/slices/authSlice";
 import { AuthController } from "@/modules/Auth/infra/http/controllers/auth.controller";
+import { AuthStorageService } from "@/shared/services/auth-storage.service";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -33,10 +35,14 @@ export function LoginForm() {
     try {
       const response = await authController.login({ email, password });
 
-      // Guardar token
+      // Guardar token y datos del usuario usando servicio centralizado
       if (response.token) {
-        localStorage.setItem("token", response.token);
-        localStorage.setItem("userId", response.user.id);
+        AuthStorageService.saveAuthData({
+          token: response.token,
+          userId: response.user.id,
+          userEmail: response.user.email,
+          userRole: response.user.role,
+        });
       }
 
       // Actualizar Redux
@@ -46,7 +52,8 @@ export function LoginForm() {
         role: response.user.role,
       }));
 
-      navigate("/", { replace: true });
+      // Redirigir al dashboard después del login
+      navigate(ROUTES.DASHBOARD.HOME, { replace: true });
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -113,7 +120,7 @@ export function LoginForm() {
                     <input type="checkbox" className="accent-blue-500" />
                     Recuérdame
                   </label>
-                  <Link to="/forgot-password" className="text-blue-600 hover:text-blue-700 hover:underline font-medium">¿Olvidaste tu contraseña?</Link>
+                  <Link to={ROUTES.PUBLIC.FORGOT_PASSWORD} className="text-blue-600 hover:text-blue-700 hover:underline font-medium">¿Olvidaste tu contraseña?</Link>
                 </div>
               </div>
               <Button 
@@ -134,7 +141,7 @@ export function LoginForm() {
               </Button>
               <div className="text-center text-sm mt-2 text-gray-600">
                 ¿No tienes cuenta?{' '}
-                <Link to="/register" className="text-blue-600 hover:text-blue-700 hover:underline font-medium">Regístrate</Link>
+                <Link to={ROUTES.PUBLIC.REGISTER} className="text-blue-600 hover:text-blue-700 hover:underline font-medium">Regístrate</Link>
               </div>
             </form>
           </Card>

@@ -5,6 +5,8 @@ import UserRoutes from './src/routes/user.js';
 import WorkerRoutes from './src/routes/worker.js';
 import LoggerRoutes from './src/routes/logger.js';
 import CategoryRoutes from './src/routes/category.js';
+import ServiceRequestRoutes from './src/routes/serviceRequest.js';
+import ReviewRoutes from './src/routes/review.js';
 import morgan from "morgan";
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -36,6 +38,8 @@ app.use('/users', UserRoutes);
 app.use('/workers', WorkerRoutes);
 app.use('/auth', LoggerRoutes);
 app.use('/categories', CategoryRoutes);
+app.use('/service-requests', ServiceRequestRoutes);
+app.use('/reviews', ReviewRoutes);
 
 // Healthcheck sencillo
 app.get('/health', (_req, res) => {

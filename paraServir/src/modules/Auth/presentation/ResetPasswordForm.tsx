@@ -5,6 +5,7 @@ import { Card } from "@/shared/components/ui/card";
 import { Label } from "@/shared/components/ui/label";
 import { Alert } from "@/shared/components/ui/alert";
 import { Link, useNavigate } from "react-router-dom";
+import { ROUTES } from "@/shared/constants/routes.constants";
 
 export function ResetPasswordForm() {
   const [password, setPassword] = useState("");
@@ -35,7 +36,7 @@ export function ResetPasswordForm() {
       setError("La contraseña no cumple los requisitos");
       return;
     }
-    navigate("/reset-success");
+    navigate(ROUTES.PUBLIC.RESET_SUCCESS);
   };
 
   return (

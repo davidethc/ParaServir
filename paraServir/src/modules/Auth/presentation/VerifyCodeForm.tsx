@@ -3,6 +3,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { Alert } from "@/shared/components/ui/alert";
 import { Link, useNavigate } from "react-router-dom";
+import { ROUTES } from "@/shared/constants/routes.constants";
 import { Input } from "@/shared/components/ui/input";
 
 export function VerifyCodeForm() {
@@ -29,7 +30,7 @@ export function VerifyCodeForm() {
       setError("Debes ingresar el código completo");
       return;
     }
-    navigate("/reset-password");
+    navigate(ROUTES.PUBLIC.RESET_PASSWORD);
   };
 
   return (

@@ -1,6 +1,6 @@
 import type { CompleteWorkerProfileDto, CompleteWorkerProfileResponseDto } from "../dto/complete-worker-profile.dto";
 import { API_CONFIG } from "../../infra/http/api.config";
-import { simulateNetworkDelay } from "@/shared/utils/mockData";
+import { simulateNetworkDelay } from "@/shared/Utils/mockData";
 const USE_MOCK_DATA = true; // Cambiar a false cuando el backend esté listo
 
 export class CompleteWorkerProfileUseCase {

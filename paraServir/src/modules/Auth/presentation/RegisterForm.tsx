@@ -12,6 +12,8 @@ import {
   SelectItem
 } from "@/shared/components/ui/select";
 import { Link, useNavigate } from "react-router-dom";
+import { ROUTES, getPostLoginRoute } from "@/shared/constants/routes.constants";
+import { AuthStorageService } from "@/shared/services/auth-storage.service";
 import { AuthController } from "@/modules/Auth/infra/http/controllers/auth.controller";
 import { useDispatch } from "react-redux";
 import { login } from "@/Store/slices/authSlice";
@@ -98,10 +100,14 @@ export function RegisterForm() {
         role: role as "usuario" | "trabajador",
       });
 
-      // Guardar token si existe
+      // Guardar token y datos del usuario usando servicio centralizado
       if (response.token) {
-        localStorage.setItem("token", response.token);
-        localStorage.setItem("userId", response.userId);
+        AuthStorageService.saveAuthData({
+          token: response.token,
+          userId: response.userId,
+          userEmail: response.email,
+          userRole: response.role,
+        });
       }
 
       // Actualizar Redux
@@ -111,12 +117,14 @@ export function RegisterForm() {
         role: response.role,
       }));
 
-      // Si es trabajador y necesita completar perfil, redirigir
-      if (response.role === "trabajador" && (response.nextStep === "complete_worker_profile" || !response.nextStep)) {
+      // Redirigir según el rol del usuario
+      const redirectRoute = getPostLoginRoute(response.role);
+      
+      if (response.role === "trabajador") {
         // Asegurar que tenemos token antes de redirigir
-        const tokenToPass = response.token || localStorage.getItem("token") || "";
+        const tokenToPass = response.token || AuthStorageService.getToken() || "";
         if (tokenToPass && response.userId) {
-          navigate("/complete-worker-profile", { 
+          navigate(redirectRoute, { 
             state: { 
               userId: response.userId, 
               token: tokenToPass 
@@ -126,11 +134,11 @@ export function RegisterForm() {
         } else {
           // Si no hay token, redirigir a login
           setError("Error al obtener token. Por favor inicia sesión.");
-          navigate("/login");
+          navigate(ROUTES.PUBLIC.LOGIN);
         }
       } else {
-        // Si es usuario normal, redirigir a home o dashboard
-        navigate("/", { replace: true });
+        // Si es usuario normal, redirigir al dashboard
+        navigate(redirectRoute, { replace: true });
       }
     } catch (err) {
       if (err instanceof Error) {
@@ -345,7 +353,7 @@ export function RegisterForm() {
 
               <div className="text-center text-sm mt-2 text-gray-600">
                 ¿Ya tienes una cuenta?{' '}
-                <Link to="/login" className="text-blue-600 hover:text-blue-700 hover:underline font-medium">Inicia sesión</Link>
+                <Link to={ROUTES.PUBLIC.LOGIN} className="text-blue-600 hover:text-blue-700 hover:underline font-medium">Inicia sesión</Link>
               </div>
             </form>
           </Card>

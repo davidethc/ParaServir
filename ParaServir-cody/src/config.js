@@ -1,1 +1,5 @@
-export const port = 3900;
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+export const port = process.env.PORT || 3900;

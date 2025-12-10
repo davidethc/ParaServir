@@ -1,4 +1,4 @@
-import { User } from "../../Domain/entities/User";
+// User se usa implícitamente a través de user.verify()
 import { UserNotFoundError } from "../../Domain/errors/UserNotFoundError";
 import type { UserRepository } from "../../Domain/repositories/UserRepository";
 

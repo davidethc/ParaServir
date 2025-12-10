@@ -2,6 +2,7 @@
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { Link, useNavigate } from "react-router-dom";
+import { ROUTES } from "@/shared/constants/routes.constants";
 
 export function SuccessResetForm() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export function SuccessResetForm() {
           Recuerda siempre la contraseña de tu cuenta
         </p>
         <Card className="w-full max-w-md p-8 shadow-none border-none flex flex-col items-center">
-          <Button className="w-full bg-gray-900 text-white hover:bg-gray-800" onClick={() => navigate('/login')}>
+          <Button className="w-full bg-gray-900 text-white hover:bg-gray-800" onClick={() => navigate(ROUTES.PUBLIC.LOGIN)}>
             Volver al inicio de sesión
           </Button>
         </Card>

@@ -5,6 +5,7 @@ import { Card } from "@/shared/components/ui/card";
 import { Label } from "@/shared/components/ui/label";
 import { Alert } from "@/shared/components/ui/alert";
 import { Link, useNavigate } from "react-router-dom";
+import { ROUTES } from "@/shared/constants/routes.constants";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -19,7 +20,7 @@ export function ForgotPasswordForm() {
       return;
     }
     // Simulación de envío de email
-    navigate("/verify-code");
+    navigate(ROUTES.PUBLIC.VERIFY_CODE);
   };
 
   return (
@@ -51,7 +52,7 @@ export function ForgotPasswordForm() {
             <Button type="submit" className="w-full bg-gray-900 text-white hover:bg-gray-800">
               Volver al inicio de sesión
             </Button>
-            <Button type="button" variant="outline" className="w-full" onClick={() => navigate('/login')}>
+            <Button type="button" variant="outline" className="w-full" onClick={() => navigate(ROUTES.PUBLIC.LOGIN)}>
               Volver al inicio de sesión
             </Button>
           </form>

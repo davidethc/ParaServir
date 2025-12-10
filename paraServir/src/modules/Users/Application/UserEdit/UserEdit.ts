@@ -1,4 +1,4 @@
-import { User } from "../../Domain/entities/User";
+// User se usa implícitamente a través de user.email, user.updatePassword, etc.
 import { UserEmail } from "../../Domain/value-objects/UserEmail";
 import { UserNotFoundError } from "../../Domain/errors/UserNotFoundError";
 import { UserPasswordHash } from "../../Domain/value-objects/UserPasswordHash";
