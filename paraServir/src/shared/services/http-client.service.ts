@@ -33,13 +33,17 @@ export class HttpClientService {
 
   /**
    * Construye los headers con el token si existe
+   * Si se pasa Authorization en customHeaders, tiene prioridad sobre el token de localStorage
    */
   private buildHeaders(customHeaders?: Record<string, string>): Record<string, string> {
-    const token = this.getAuthToken();
     const headers = { ...this.defaultHeaders, ...customHeaders };
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    // Si no se pasó Authorization en customHeaders, usar el token de localStorage
+    if (!headers['Authorization']) {
+      const token = this.getAuthToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
     }
 
     return headers;

@@ -110,7 +110,7 @@ export function RegisterForm() {
         });
       }
 
-      // Actualizar Redux
+      // Actualizar Redux primero
       dispatch(login({
         id: response.userId,
         email: response.email,
@@ -119,27 +119,34 @@ export function RegisterForm() {
 
       // Redirigir según el rol del usuario
       const redirectRoute = getPostLoginRoute(response.role);
+      console.log("Registro exitoso. Rol:", response.role, "Redirigiendo a:", redirectRoute);
       
-      if (response.role === "trabajador") {
-        // Asegurar que tenemos token antes de redirigir
-        const tokenToPass = response.token || AuthStorageService.getToken() || "";
-        if (tokenToPass && response.userId) {
-          navigate(redirectRoute, { 
-            state: { 
-              userId: response.userId, 
-              token: tokenToPass 
-            },
-            replace: false 
-          });
+      // Usar setTimeout para asegurar que Redux se actualice antes de navegar
+      // Esto evita conflictos con PublicRoute que podría estar verificando el estado
+      setTimeout(() => {
+        if (response.role === "trabajador") {
+          // Asegurar que tenemos token antes de redirigir
+          const tokenToPass = response.token || AuthStorageService.getToken() || "";
+          if (tokenToPass && response.userId) {
+            console.log("Redirigiendo trabajador a:", redirectRoute);
+            navigate(redirectRoute, { 
+              state: { 
+                userId: response.userId, 
+                token: tokenToPass 
+              },
+              replace: true 
+            });
+          } else {
+            // Si no hay token, redirigir a login
+            setError("Error al obtener token. Por favor inicia sesión.");
+            navigate(ROUTES.PUBLIC.LOGIN, { replace: true });
+          }
         } else {
-          // Si no hay token, redirigir a login
-          setError("Error al obtener token. Por favor inicia sesión.");
-          navigate(ROUTES.PUBLIC.LOGIN);
+          // Si es usuario normal, redirigir a categorías
+          console.log("Redirigiendo usuario normal a:", redirectRoute);
+          navigate(redirectRoute, { replace: true });
         }
-      } else {
-        // Si es usuario normal, redirigir al dashboard
-        navigate(redirectRoute, { replace: true });
-      }
+      }, 100);
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -173,6 +180,7 @@ export function RegisterForm() {
                   </Label>
                   <Input
                     id="firstName"
+                    name="firstName"
                     type="text"
                     value={firstName}
                     onChange={e => setFirstName(e.target.value)}
@@ -187,6 +195,7 @@ export function RegisterForm() {
                   </Label>
                   <Input
                     id="lastName"
+                    name="lastName"
                     type="text"
                     value={lastName}
                     onChange={e => setLastName(e.target.value)}
@@ -203,6 +212,7 @@ export function RegisterForm() {
                 </Label>
                 <Input
                   id="cedula"
+                  name="cedula"
                   type="text"
                   value={cedula}
                   onChange={e => setCedula(e.target.value)}
@@ -218,6 +228,7 @@ export function RegisterForm() {
                 </Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
@@ -233,6 +244,7 @@ export function RegisterForm() {
                 </Label>
                 <Input
                   id="phone"
+                  name="phone"
                   type="tel"
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
@@ -248,6 +260,7 @@ export function RegisterForm() {
                 </Label>
                 <Input
                   id="location"
+                  name="location"
                   type="text"
                   value={location}
                   onChange={e => setLocation(e.target.value)}
@@ -263,6 +276,7 @@ export function RegisterForm() {
                 </Label>
                 <Input
                   id="avatarUrl"
+                  name="avatarUrl"
                   type="url"
                   value={avatarUrl}
                   onChange={e => setAvatarUrl(e.target.value)}
@@ -278,6 +292,7 @@ export function RegisterForm() {
                 <div className="relative mt-1">
                   <Input
                     id="password"
+                    name="password"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
@@ -306,6 +321,7 @@ export function RegisterForm() {
                 </Label>
                 <Input
                   id="confirmPassword"
+                  name="confirmPassword"
                   type={showPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
@@ -320,7 +336,7 @@ export function RegisterForm() {
                   Rol <span className="text-red-500">*</span>
                 </Label>
                 <Select value={role} onValueChange={(value) => setRole(value as "usuario" | "trabajador")}>
-                  <SelectTrigger className="mt-1 w-full border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white" aria-label="Selecciona un rol" id="role">
+                  <SelectTrigger name="role" className="mt-1 w-full border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white" aria-label="Selecciona un rol" id="role">
                     <SelectValue placeholder="Selecciona un rol" />
                   </SelectTrigger>
                   <SelectContent className="z-[9999] bg-white border-gray-200 shadow-xl">

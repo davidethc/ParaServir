@@ -44,18 +44,24 @@ export function VerifyCodeForm() {
         <Card className="w-full max-w-md p-8 shadow-none border-none flex flex-col items-center">
           <form onSubmit={handleSubmit} className="w-full flex flex-col items-center gap-4">
             {error && <Alert variant="destructive">{error}</Alert>}
-            <div className="flex gap-2 mb-2">
+            <div className="flex gap-2 mb-2" role="group" aria-label="Código de verificación">
               {code.map((c, i) => (
-                <Input
-                  key={i}
-                  id={`code-${i}`}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={c}
-                  onChange={e => handleChange(i, e.target.value)}
-                  className={`w-14 h-14 text-center text-xl border-2 ${c ? 'border-green-500' : 'border-gray-200'}`}
-                />
+                <div key={i}>
+                  <label htmlFor={`code-${i}`} className="sr-only">
+                    Dígito {i + 1} del código de verificación
+                  </label>
+                  <Input
+                    id={`code-${i}`}
+                    name={`code-${i}`}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={c}
+                    onChange={e => handleChange(i, e.target.value)}
+                    className={`w-14 h-14 text-center text-xl border-2 ${c ? 'border-green-500' : 'border-gray-200'}`}
+                    aria-label={`Dígito ${i + 1} del código`}
+                  />
+                </div>
               ))}
             </div>
             <Button className="w-full bg-gray-900 text-white hover:bg-gray-800" type="submit">

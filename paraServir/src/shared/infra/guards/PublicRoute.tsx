@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/Store";
-import { ROUTES } from "@/shared/constants/routes.constants";
+import { getPostLoginRoute } from "@/shared/constants/routes.constants";
 import { AuthStorageService } from "@/shared/services/auth-storage.service";
 
 interface PublicRouteProps {
@@ -10,17 +10,20 @@ interface PublicRouteProps {
 
 /**
  * Componente que protege rutas públicas (login, register)
- * Redirige al dashboard si el usuario ya está autenticado
+ * Redirige según el rol del usuario si ya está autenticado
+ * Usuarios normales → categorías, Trabajadores → crear servicio
  */
 export function PublicRoute({ children }: PublicRouteProps) {
   const isAuthenticated = useSelector(
     (state: RootState) => state.auth.isAuthenticated
   );
+  const user = useSelector((state: RootState) => state.auth.user);
   const token = AuthStorageService.getToken();
 
-  // Si el usuario está autenticado, redirigir al dashboard
-  if (isAuthenticated && token) {
-    return <Navigate to={ROUTES.DASHBOARD.HOME} replace />;
+  // Si el usuario está autenticado, redirigir según su rol
+  if (isAuthenticated && token && user) {
+    const redirectRoute = getPostLoginRoute(user.role);
+    return <Navigate to={redirectRoute} replace />;
   }
 
   return <>{children}</>;

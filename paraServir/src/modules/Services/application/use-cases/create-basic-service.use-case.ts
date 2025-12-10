@@ -1,8 +1,9 @@
 import type { CreateBasicServiceDto, CreateBasicServiceResponseDto } from "../dto/create-basic-service.dto";
 import { API_CONFIG } from "../../infra/http/api.config";
+import { HttpClientService } from "@/shared/services/http-client.service";
 import { simulateNetworkDelay } from "@/shared/Utils/mockData";
 
-const USE_MOCK_DATA = true; // Cambiar a false cuando el backend esté listo
+const USE_MOCK_DATA = false; // Conectado al backend real
 
 export class CreateBasicServiceUseCase {
     private apiUrl: string;
@@ -25,6 +26,10 @@ export class CreateBasicServiceUseCase {
             };
         }
 
+        if (!token) {
+            throw new Error("Token de autenticación requerido");
+        }
+
         try {
             // Calcular base_price basado en price_range si es hourly
             let basePrice: number | null = null;
@@ -33,37 +38,36 @@ export class CreateBasicServiceUseCase {
                 basePrice = max ? (min + max) / 2 : min; // Promedio del rango
             }
 
-            const response = await fetch(`${this.apiUrl}${API_CONFIG.endpoints.services.createBasic}`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    services: [{
-                        category_id: dto.category_id,
-                        title: dto.title,
-                        description: dto.description,
-                        base_price: basePrice,
-                    }]
-                }),
+            // Usar HttpClientService para manejar automáticamente el token
+            const httpClient = new HttpClientService({ baseUrl: this.apiUrl });
+
+            // El backend espera un array de services
+            const requestBody = {
+                services: [{
+                    category_id: dto.category_id,
+                    title: dto.title,
+                    description: dto.description,
+                    base_price: basePrice,
+                }]
+            };
+
+            console.log("Enviando petición a:", `${this.apiUrl}${API_CONFIG.endpoints.services.createBasic}`);
+            console.log("Body:", requestBody);
+            console.log("Token presente:", !!token);
+            console.log("Token (primeros 20 chars):", token.substring(0, 20) + "...");
+
+            // Usar el token pasado como parámetro directamente en los headers
+            // Esto asegura que usamos el token correcto, no el de localStorage
+            const data = await httpClient.post<{
+                status?: string;
+                message?: string;
+                services?: Array<{ id: string; title: string; description: string; base_price: number }>;
+                serviceId?: string;
+            }>(API_CONFIG.endpoints.services.createBasic, requestBody, {
+                'Authorization': `Bearer ${token}`
             });
-
-            if (response.status === 401) {
-                throw new Error("No autenticado. Por favor inicia sesión nuevamente.");
-            }
-
-            if (response.status === 400) {
-                const error = await response.json().catch(() => ({ message: 'Datos inválidos' }));
-                throw new Error(error.message || 'Datos inválidos');
-            }
-
-            if (!response.ok) {
-                const error = await response.json().catch(() => ({ message: 'Error al crear servicio' }));
-                throw new Error(error.message || 'Error al crear servicio');
-            }
-
-            const data = await response.json();
+            
+            console.log("Respuesta del backend:", data);
             
             return {
                 serviceId: data.services?.[0]?.id || data.serviceId || `service-${Date.now()}`,
@@ -71,18 +75,16 @@ export class CreateBasicServiceUseCase {
                 nextStep: "login",
             };
         } catch (error) {
-            // Manejar errores de conexión - usar mock como fallback
-            if (error instanceof TypeError && error.message.includes('fetch')) {
-                await simulateNetworkDelay(800);
-                const serviceId = `service-${Date.now()}`;
-                
-                return {
-                    serviceId,
-                    message: "Servicio creado exitosamente (modo offline)",
-                    nextStep: "login",
-                };
-            }
+            // Manejar errores específicos
             if (error instanceof Error) {
+                // Si el error menciona 403 o "No autorizado", verificar el rol
+                if (error.message.includes('403') || error.message.includes('No autorizado') || error.message.includes('permisos')) {
+                    throw new Error("No tienes permisos para crear servicios. Asegúrate de estar registrado como trabajador.");
+                }
+                // Si el error menciona 401 o "No autenticado", verificar el token
+                if (error.message.includes('401') || error.message.includes('No autenticado') || error.message.includes('Token')) {
+                    throw new Error("Sesión expirada. Por favor inicia sesión nuevamente.");
+                }
                 throw error;
             }
             throw new Error('Error al crear servicio');

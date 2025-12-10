@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
-import { ROUTES } from "@/shared/constants/routes.constants";
+import { ROUTES, getPostLoginRoute } from "@/shared/constants/routes.constants";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
@@ -52,8 +52,14 @@ export function LoginForm() {
         role: response.user.role,
       }));
 
-      // Redirigir al dashboard después del login
-      navigate(ROUTES.DASHBOARD.HOME, { replace: true });
+      // Redirigir según el rol del usuario
+      const redirectRoute = getPostLoginRoute(response.user.role);
+      console.log("Login exitoso. Rol:", response.user.role, "Redirigiendo a:", redirectRoute);
+      
+      // Usar setTimeout para asegurar que Redux se actualice antes de navegar
+      setTimeout(() => {
+        navigate(redirectRoute, { replace: true });
+      }, 100);
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -82,6 +88,7 @@ export function LoginForm() {
                 <Label htmlFor="email" className="font-medium text-gray-700">Correo electrónico <span className="text-red-500">*</span></Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
@@ -95,6 +102,7 @@ export function LoginForm() {
                 <div className="relative mt-1">
                   <Input
                     id="password"
+                    name="password"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={e => setPassword(e.target.value)}

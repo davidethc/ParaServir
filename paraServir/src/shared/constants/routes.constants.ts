@@ -78,10 +78,13 @@ export const isPublicRoute = (path: string): boolean => {
 
 /**
  * Obtener la ruta de redirección después del login según el rol
+ * Usuarios normales van a ver categorías de servicios
+ * Trabajadores van a completar su perfil o crear servicios
  */
 export const getPostLoginRoute = (role: string): string => {
   if (role === "trabajador") {
     return ROUTES.WORKER.CREATE_SERVICE;
   }
-  return ROUTES.DASHBOARD.HOME;
+  // Usuarios normales van directamente a ver las categorías de servicios
+  return ROUTES.DASHBOARD.CATEGORIES;
 };

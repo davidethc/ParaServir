@@ -107,6 +107,16 @@ export function CreateBasicServiceForm() {
     try {
       const finalUserId = userId || location.state?.userId || AuthStorageService.getUserId() || "";
       const finalToken = token || location.state?.token || AuthStorageService.getToken() || "";
+      const userRole = AuthStorageService.getUserRole();
+
+      console.log("Creando servicio con:", {
+        userId: finalUserId,
+        tokenPresent: !!finalToken,
+        tokenLength: finalToken.length,
+        userRole: userRole,
+        categoryId: categoryId,
+        serviceName: serviceName
+      });
 
       if (!finalUserId || !finalToken) {
         setError("Error de autenticación. Por favor inicia sesión nuevamente.");
@@ -114,7 +124,12 @@ export function CreateBasicServiceForm() {
         return;
       }
 
-      await serviceController.createBasicService({
+      if (userRole !== "trabajador") {
+        setError("Solo los trabajadores pueden crear servicios. Tu rol actual es: " + (userRole || "no definido"));
+        return;
+      }
+
+      const response = await serviceController.createBasicService({
         userId: finalUserId,
         category_id: categoryId,
         title: serviceName,
@@ -124,10 +139,13 @@ export function CreateBasicServiceForm() {
         years_experience: yearsExperience,
       }, finalToken);
 
-      // Redirigir a login después de crear el servicio
-      navigate(ROUTES.PUBLIC.LOGIN, { 
+      console.log("Servicio creado exitosamente:", response);
+      
+      // Redirigir al dashboard después de crear el servicio exitosamente
+      // Si el trabajador necesita completar su perfil, puede hacerlo desde el dashboard
+      navigate(ROUTES.DASHBOARD.HOME, { 
         state: { 
-          message: "Servicio creado exitosamente. Por favor inicia sesión." 
+          message: "Servicio creado exitosamente. ¡Ya puedes comenzar a recibir solicitudes!" 
         },
         replace: true 
       });
@@ -253,6 +271,7 @@ export function CreateBasicServiceForm() {
               </Label>
               <Input
                 id="serviceName"
+                name="serviceName"
                 type="text"
                 value={serviceName}
                 onChange={(e) => setServiceName(e.target.value)}
@@ -272,7 +291,7 @@ export function CreateBasicServiceForm() {
                 onValueChange={setCategoryId}
                 disabled={loadingCategories}
               >
-                <SelectTrigger className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white">
+                <SelectTrigger id="category" className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white" aria-label="Selecciona una categoría">
                   <SelectValue placeholder={loadingCategories ? "Cargando..." : "Selecciona una categoría"} />
                 </SelectTrigger>
                 <SelectContent className="z-[9999] bg-white border-gray-200 shadow-xl">
@@ -292,6 +311,7 @@ export function CreateBasicServiceForm() {
               </Label>
               <Textarea
                 id="description"
+                name="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Arreglo todo tipo de cosas que se tenga q ver con madera"
@@ -303,11 +323,12 @@ export function CreateBasicServiceForm() {
 
             {/* Precio por Hora */}
             <div>
-              <Label className="font-medium text-gray-700 mb-3 block">
+              <Label id="price-hourly-label" htmlFor="price-hourly" className="font-medium text-gray-700 mb-3 block">
                 Precio la hora
               </Label>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-3" role="group" aria-labelledby="price-hourly-label">
                 <SelectionButton
+                  name="price-range"
                   value="1-3"
                   selected={priceType === "hourly" && priceRange === "1-3"}
                   onSelect={(value) => {
@@ -319,6 +340,7 @@ export function CreateBasicServiceForm() {
                   1-3 $
                 </SelectionButton>
                 <SelectionButton
+                  name="price-range"
                   value="3-6"
                   selected={priceType === "hourly" && priceRange === "3-6"}
                   onSelect={(value) => {
@@ -330,6 +352,7 @@ export function CreateBasicServiceForm() {
                   3-6 $
                 </SelectionButton>
                 <SelectionButton
+                  name="price-range"
                   value="6-9"
                   selected={priceType === "hourly" && priceRange === "6-9"}
                   onSelect={(value) => {
@@ -341,6 +364,7 @@ export function CreateBasicServiceForm() {
                   6-9 $
                 </SelectionButton>
                 <SelectionButton
+                  name="price-range"
                   value="9+"
                   selected={priceType === "hourly" && priceRange === "9+"}
                   onSelect={(value) => {
@@ -356,7 +380,12 @@ export function CreateBasicServiceForm() {
 
             {/* Precio por Obra */}
             <div className="mt-4">
+              <Label htmlFor="price-per-job" className="font-medium text-gray-700 mb-3 block">
+                Precio por obra
+              </Label>
               <SelectionButton
+                id="price-per-job"
+                name="price-type"
                 value="per_job"
                 selected={priceType === "per_job"}
                 onSelect={() => {
@@ -375,11 +404,12 @@ export function CreateBasicServiceForm() {
 
             {/* Años de Experiencia */}
             <div>
-              <Label className="font-medium text-gray-700 mb-3 block">
+              <Label id="yearsExperience-label" htmlFor="yearsExperience" className="font-medium text-gray-700 mb-3 block">
                 Años de experiencia <span className="text-red-500">*</span>
               </Label>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-3" role="group" aria-labelledby="yearsExperience-label">
                 <SelectionButton
+                  name="yearsExperience"
                   value="1-10"
                   selected={yearsExperience === "1-10"}
                   onSelect={setYearsExperience}
@@ -387,6 +417,7 @@ export function CreateBasicServiceForm() {
                   1-10
                 </SelectionButton>
                 <SelectionButton
+                  name="yearsExperience"
                   value="11-50"
                   selected={yearsExperience === "11-50"}
                   onSelect={setYearsExperience}
@@ -394,6 +425,7 @@ export function CreateBasicServiceForm() {
                   11-50
                 </SelectionButton>
                 <SelectionButton
+                  name="yearsExperience"
                   value="51-100"
                   selected={yearsExperience === "51-100"}
                   onSelect={setYearsExperience}
@@ -401,6 +433,7 @@ export function CreateBasicServiceForm() {
                   51-100
                 </SelectionButton>
                 <SelectionButton
+                  name="yearsExperience"
                   value="101-200"
                   selected={yearsExperience === "101-200"}
                   onSelect={setYearsExperience}
@@ -408,6 +441,7 @@ export function CreateBasicServiceForm() {
                   101-200
                 </SelectionButton>
                 <SelectionButton
+                  name="yearsExperience"
                   value="201-500"
                   selected={yearsExperience === "201-500"}
                   onSelect={setYearsExperience}
@@ -415,6 +449,7 @@ export function CreateBasicServiceForm() {
                   201-500
                 </SelectionButton>
                 <SelectionButton
+                  name="yearsExperience"
                   value="500+"
                   selected={yearsExperience === "500+"}
                   onSelect={setYearsExperience}
