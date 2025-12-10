@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createService, listServices, watchService } from "../controllers/service.js";
+import { createService, listServices, watchService, deleteService, updateService } from "../controllers/service.js";
 import { auth } from "../middlewares/auth.js";
 import { requireWorker } from "../middlewares/requireWorker.js";
 import { validateService } from "../middlewares/validateService.js";
@@ -10,5 +10,7 @@ const router = Router();
 router.post('/create', auth, requireWorker, validateService, createService);
 router.get('/list', auth, listServices);
 router.get('/watch/:id', auth, watchService);
+router.delete('/delete/:id', auth, requireWorker, deleteService);
+router.put('/update/:id', auth, requireWorker, validateService, updateService);
 
 export default router; 

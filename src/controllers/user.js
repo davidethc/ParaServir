@@ -91,8 +91,9 @@ export const deleteUser = async (req, res) => {
 };
 
 export const createUser = async (req, res) => {
-    const client = await pool.connect();
+    let client;
     try {
+        client = await pool.connect();
         await client.query('BEGIN');
 
         const { user, worker } = normalizeUserInput(req.body);
@@ -188,8 +189,9 @@ export const createUser = async (req, res) => {
 
 
 export const update = async (req, res) => {
-    const client = await pool.connect();
+    let client;
     try {
+        client = await pool.connect();
         await client.query('BEGIN');
 
         const { id } = req.params;
@@ -204,6 +206,7 @@ export const update = async (req, res) => {
         );
 
         if (userExists.rowCount === 0) {
+            await client.query(`ROLLBACK`);
             return res.status(404).json({
                 message: "El usuario no existe"
             });
