@@ -1,0 +1,424 @@
+{
+  "info": {
+    "name": "ParaServir API - Colección Completa",
+    "_postman_id": "f9c1c5e4-0001-4b0c-9c9b-para-servir",
+    "description": "Colección completa para probar todas las APIs de ParaServir. Incluye todos los endpoints disponibles en el backend.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        },
+        "description": "Verifica el estado del servidor"
+      },
+      "response": []
+    },
+    {
+      "name": "Categorías",
+      "item": [
+        {
+          "name": "Listar Categorías",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["categories"]
+            },
+            "description": "Obtiene todas las categorías de servicios disponibles (público)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Registro (Usuario o Trabajador)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"juan@mail.com\",\n  \"password\": \"Password123!\",\n  \"first_name\": \"Juan\",\n  \"last_name\": \"Pérez\",\n  \"cedula\": \"1712345678\",\n  \"phone\": \"0999999999\",\n  \"location\": \"Loja, Ecuador\",\n  \"avatar_url\": \"https://ejemplo.com/avatar.jpg\",\n  \"role\": \"trabajador\",\n  \"years_experience\": 3,\n  \"certification_url\": \"https://certs.com/doc.pdf\",\n  \"service_title\": \"Plomería básica\",\n  \"service_description\": \"Reparación de fugas y grifos\",\n  \"category_id\": \"{{categoryId}}\",\n  \"base_price\": 25.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Registra un nuevo usuario o trabajador. Si es trabajador, puede incluir datos del servicio inicial."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.token) {",
+                  "  pm.collectionVariables.set('token', res.token);",
+                  "  pm.collectionVariables.set('userId', res.user?.id || '');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"juan@mail.com\",\n  \"password\": \"Password123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Inicia sesión y obtiene un token JWT. El token se guarda automáticamente en la variable 'token'."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Cierra sesión eliminando la cookie de autenticación"
+          },
+          "response": []
+        },
+        {
+          "name": "Verificar Email",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-email?token={{verificationToken}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "verify-email"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{verificationToken}}",
+                  "description": "Token de verificación recibido por email"
+                }
+              ]
+            },
+            "description": "Verifica el email del usuario usando el token enviado por correo"
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints de autenticación"
+    },
+    {
+      "name": "Usuarios",
+      "item": [
+        {
+          "name": "Crear Usuario (Público)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"cliente@mail.com\",\n  \"password\": \"Password123!\",\n  \"first_name\": \"María\",\n  \"last_name\": \"López\",\n  \"cedula\": \"1712345679\",\n  \"phone\": \"0988888888\",\n  \"location\": \"Quito\",\n  \"avatar_url\": null,\n  \"role\": \"usuario\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/new",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "new"]
+            },
+            "description": "Crea un nuevo usuario regular (cliente). Similar a /auth/register pero específico para usuarios."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Clientes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "description": "Token JWT de autenticación"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "list"]
+            },
+            "description": "Obtiene la lista de todos los usuarios con rol 'usuario' (clientes). Requiere autenticación."
+          },
+          "response": []
+        },
+        {
+          "name": "Ver Cliente por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/watch/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "watch", "{{userId}}"]
+            },
+            "description": "Obtiene los datos de un usuario específico por su ID. Requiere autenticación."
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar Usuario",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"cliente@mail.com\",\n  \"password\": \"NewPassword123!\",\n  \"first_name\": \"María\",\n  \"last_name\": \"López\",\n  \"cedula\": \"1712345679\",\n  \"phone\": \"0988888888\",\n  \"location\": \"Quito\",\n  \"avatar_url\": null,\n  \"role\": \"usuario\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/edit/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "edit", "{{userId}}"]
+            },
+            "description": "Actualiza los datos de un usuario existente. El campo 'password' es opcional. Requiere autenticación."
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar Usuario",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/delete/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "delete", "{{userId}}"]
+            },
+            "description": "Elimina un usuario y todos sus datos relacionados (cascada). Requiere autenticación."
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints para gestión de usuarios (clientes)"
+    },
+    {
+      "name": "Trabajadores",
+      "item": [
+        {
+          "name": "Listar Trabajadores",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workers/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["workers", "list"]
+            },
+            "description": "Obtiene la lista de todos los trabajadores con sus perfiles completos. Requiere autenticación."
+          },
+          "response": []
+        },
+        {
+          "name": "Ver Trabajador por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workers/watch/{{workerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["workers", "watch", "{{workerId}}"]
+            },
+            "description": "Obtiene los datos completos de un trabajador específico. Requiere autenticación."
+          },
+          "response": []
+        },
+        {
+          "name": "Crear/Actualizar Perfil de Trabajador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"years_experience\": 5,\n  \"certification_url\": \"https://certs.com/certificado.pdf\",\n  \"verification_status\": \"pending\",\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workers/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["workers", "profile"]
+            },
+            "description": "Crea o actualiza el perfil profesional del trabajador autenticado. Requiere rol 'trabajador'."
+          },
+          "response": []
+        },
+        {
+          "name": "Crear Servicios del Trabajador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"services\": [\n    {\n      \"title\": \"Plomería básica\",\n      \"description\": \"Reparación de fugas y grifos\",\n      \"category_id\": \"{{categoryId}}\",\n      \"base_price\": 25.5\n    },\n    {\n      \"title\": \"Instalación de tuberías\",\n      \"description\": \"Instalación completa de sistemas de tuberías\",\n      \"category_name\": \"Plomería\",\n      \"base_price\": 50.0\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workers/services",
+              "host": ["{{baseUrl}}"],
+              "path": ["workers", "services"]
+            },
+            "description": "Crea uno o más servicios para el trabajador autenticado. Máximo 3 servicios por trabajador. Requiere rol 'trabajador'. Puedes usar 'category_id' (UUID) o 'category_name' (string)."
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints para gestión de trabajadores"
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3900",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string",
+      "description": "Token JWT obtenido del login. Se actualiza automáticamente."
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string",
+      "description": "ID del usuario. Se actualiza automáticamente después del login."
+    },
+    {
+      "key": "workerId",
+      "value": "",
+      "type": "string",
+      "description": "ID del trabajador para pruebas"
+    },
+    {
+      "key": "categoryId",
+      "value": "",
+      "type": "string",
+      "description": "UUID de una categoría. Obtener de GET /categories"
+    },
+    {
+      "key": "verificationToken",
+      "value": "",
+      "type": "string",
+      "description": "Token de verificación recibido por email"
+    }
+  ]
+}

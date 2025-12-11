@@ -1,0 +1,902 @@
+{
+	"info": {
+		"_postman_id": "paraservir-api-collection",
+		"name": "ParaServir API - Completa",
+		"description": "Colección completa de endpoints de la API ParaServir con todos los endpoints implementados",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": ["{{base_url}}"],
+							"path": ["health"]
+						},
+						"description": "Verifica el estado del servidor"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Autenticación",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    if (jsonData.token) {",
+									"        pm.environment.set('auth_token', jsonData.token);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"usuario@mail.com\",\n    \"password\": \"Password123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login"]
+						},
+						"description": "Inicia sesión y obtiene un token JWT"
+					},
+					"response": []
+				},
+				{
+					"name": "Registro Usuario",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"cliente@mail.com\",\n    \"password\": \"Password123!\",\n    \"first_name\": \"María\",\n    \"last_name\": \"López\",\n    \"cedula\": \"1712345679\",\n    \"phone\": \"0988888888\",\n    \"location\": \"Quito\",\n    \"avatar_url\": null,\n    \"role\": \"usuario\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "register"]
+						},
+						"description": "Registra un nuevo usuario regular"
+					},
+					"response": []
+				},
+				{
+					"name": "Registro Trabajador",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"trabajador@mail.com\",\n    \"password\": \"Password123!\",\n    \"first_name\": \"Juan\",\n    \"last_name\": \"Pérez\",\n    \"cedula\": \"1712345678\",\n    \"phone\": \"0999999999\",\n    \"location\": \"Loja, Ecuador\",\n    \"avatar_url\": null,\n    \"role\": \"trabajador\",\n    \"years_experience\": 3,\n    \"certification_url\": \"https://certs.com/doc.pdf\",\n    \"service_title\": \"Plomería básica\",\n    \"service_description\": \"Reparación de fugas y grifos\",\n    \"category_name\": \"Plomería\",\n    \"base_price\": 25.5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "register"]
+						},
+						"description": "Registra un nuevo trabajador con servicio inicial"
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/logout",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "logout"]
+						},
+						"description": "Cierra sesión eliminando la cookie de autenticación"
+					},
+					"response": []
+				},
+				{
+					"name": "Verificar Email",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/verify-email?token=TOKEN_AQUI",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "verify-email"],
+							"query": [
+								{
+									"key": "token",
+									"value": "TOKEN_AQUI",
+									"description": "Token de verificación recibido por email"
+								}
+							]
+						},
+						"description": "Verifica el email del usuario usando el token enviado por correo"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Categorías",
+			"item": [
+				{
+					"name": "Listar Categorías",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/categories",
+							"host": ["{{base_url}}"],
+							"path": ["categories"]
+						},
+						"description": "Obtiene todas las categorías de servicios disponibles (público)"
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Categorías con Conteo de Trabajadores",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/categories?include_workers=true",
+							"host": ["{{base_url}}"],
+							"path": ["categories"],
+							"query": [
+								{
+									"key": "include_workers",
+									"value": "true",
+									"description": "Incluye conteo de trabajadores y servicios por categoría"
+								}
+							]
+						},
+						"description": "Obtiene todas las categorías con conteo de trabajadores y servicios asociados (público)"
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Detalle de Categoría con Trabajadores",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/categories/{{category_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["categories", "{{category_id}}"]
+						},
+						"description": "Obtiene el detalle completo de una categoría incluyendo todos los trabajadores y servicios asociados (público). Usa el ID de una categoría obtenido del endpoint 'Listar Categorías'."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Usuarios",
+			"item": [
+				{
+					"name": "Obtener Mi Perfil",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/me",
+							"host": ["{{base_url}}"],
+							"path": ["users", "me"]
+						},
+						"description": "Obtiene el perfil del usuario autenticado (requiere autenticación)"
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Usuario",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"nuevo@mail.com\",\n    \"password\": \"Password123!\",\n    \"first_name\": \"Carlos\",\n    \"last_name\": \"García\",\n    \"cedula\": \"1712345670\",\n    \"phone\": \"0977777777\",\n    \"location\": \"Guayaquil\",\n    \"avatar_url\": null,\n    \"role\": \"usuario\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/new",
+							"host": ["{{base_url}}"],
+							"path": ["users", "new"]
+						},
+						"description": "Crea un nuevo usuario (público)"
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Usuarios",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/list",
+							"host": ["{{base_url}}"],
+							"path": ["users", "list"]
+						},
+						"description": "Obtiene la lista de todos los usuarios con rol 'usuario' (requiere autenticación)"
+					},
+					"response": []
+				},
+				{
+					"name": "Ver Usuario por ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/watch/:id",
+							"host": ["{{base_url}}"],
+							"path": ["users", "watch", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "UUID_DEL_USUARIO",
+									"description": "UUID del usuario"
+								}
+							]
+						},
+						"description": "Obtiene los datos de un usuario específico (requiere autenticación)"
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Usuario",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"actualizado@mail.com\",\n    \"password\": \"NewPassword123!\",\n    \"first_name\": \"María\",\n    \"last_name\": \"López\",\n    \"cedula\": \"1712345679\",\n    \"phone\": \"0988888888\",\n    \"location\": \"Quito\",\n    \"avatar_url\": null,\n    \"role\": \"usuario\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/edit/:id",
+							"host": ["{{base_url}}"],
+							"path": ["users", "edit", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "UUID_DEL_USUARIO",
+									"description": "UUID del usuario"
+								}
+							]
+						},
+						"description": "Actualiza los datos de un usuario existente (requiere autenticación). Password es opcional."
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Usuario",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/delete/:id",
+							"host": ["{{base_url}}"],
+							"path": ["users", "delete", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "UUID_DEL_USUARIO",
+									"description": "UUID del usuario"
+								}
+							]
+						},
+						"description": "Elimina un usuario y todos sus datos relacionados en cascada (requiere autenticación)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Trabajadores",
+			"item": [
+				{
+					"name": "Listar Trabajadores",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/workers/list",
+							"host": ["{{base_url}}"],
+							"path": ["workers", "list"]
+						},
+						"description": "Obtiene la lista de todos los trabajadores con sus perfiles completos (requiere autenticación)"
+					},
+					"response": []
+				},
+				{
+					"name": "Ver Trabajador por ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/workers/watch/:id",
+							"host": ["{{base_url}}"],
+							"path": ["workers", "watch", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "UUID_DEL_TRABAJADOR",
+									"description": "UUID del trabajador"
+								}
+							]
+						},
+						"description": "Obtiene los datos completos de un trabajador específico (requiere autenticación)"
+					},
+					"response": []
+				},
+				{
+					"name": "Ver Servicios de Trabajador",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/workers/:id/services",
+							"host": ["{{base_url}}"],
+							"path": ["workers", ":id", "services"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "UUID_DEL_TRABAJADOR",
+									"description": "UUID del trabajador"
+								}
+							]
+						},
+						"description": "Obtiene todos los servicios ofrecidos por un trabajador específico (requiere autenticación)"
+					},
+					"response": []
+				},
+				{
+					"name": "Crear/Actualizar Perfil Trabajador",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"years_experience\": 5,\n    \"certification_url\": \"https://certs.com/certificado.pdf\",\n    \"verification_status\": \"pending\",\n    \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/workers/profile",
+							"host": ["{{base_url}}"],
+							"path": ["workers", "profile"]
+						},
+						"description": "Crea o actualiza el perfil profesional del trabajador autenticado (requiere rol 'trabajador')"
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Servicios (Uno)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Plomería básica\",\n    \"description\": \"Reparación de fugas y grifos\",\n    \"category_id\": \"UUID_DE_CATEGORIA\",\n    \"base_price\": 25.5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/workers/services",
+							"host": ["{{base_url}}"],
+							"path": ["workers", "services"]
+						},
+						"description": "Crea un servicio para el trabajador autenticado (requiere rol 'trabajador', máx 3 servicios)"
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Servicios (Múltiples)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"services\": [\n        {\n            \"title\": \"Plomería básica\",\n            \"description\": \"Reparación de fugas y grifos\",\n            \"category_id\": \"UUID_DE_CATEGORIA\",\n            \"base_price\": 25.5\n        },\n        {\n            \"title\": \"Instalación de tuberías\",\n            \"description\": \"Instalación completa de sistemas de tuberías\",\n            \"category_name\": \"Plomería\",\n            \"base_price\": 50.0\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/workers/services",
+							"host": ["{{base_url}}"],
+							"path": ["workers", "services"]
+						},
+						"description": "Crea múltiples servicios para el trabajador autenticado (requiere rol 'trabajador', máx 3 servicios total)"
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Servicio",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Plomería avanzada\",\n    \"description\": \"Reparación e instalación completa\",\n    \"base_price\": 35.0,\n    \"is_available\": true,\n    \"category_id\": \"UUID_DE_CATEGORIA\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/workers/services/:id",
+							"host": ["{{base_url}}"],
+							"path": ["workers", "services", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "UUID_DEL_SERVICIO",
+									"description": "UUID del servicio"
+								}
+							]
+						},
+						"description": "Actualiza un servicio del trabajador autenticado (requiere rol 'trabajador')"
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Servicio",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/workers/services/:id",
+							"host": ["{{base_url}}"],
+							"path": ["workers", "services", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "UUID_DEL_SERVICIO",
+									"description": "UUID del servicio"
+								}
+							]
+						},
+						"description": "Elimina un servicio del trabajador autenticado (requiere rol 'trabajador')"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Solicitudes de Servicio",
+			"item": [
+				{
+					"name": "Crear Solicitud",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"worker_id\": \"UUID_DEL_TRABAJADOR\",\n    \"service_id\": \"UUID_DEL_SERVICIO\",\n    \"category_id\": \"UUID_DE_CATEGORIA\",\n    \"description\": \"Necesito reparar una fuga en el baño\",\n    \"address\": \"Av. Principal 123, Quito\",\n    \"scheduled_date\": \"2024-12-20T10:00:00Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/service-requests",
+							"host": ["{{base_url}}"],
+							"path": ["service-requests"]
+						},
+						"description": "Crea una nueva solicitud de servicio. category_id es requerido. worker_id y service_id son opcionales."
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Solicitudes",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/service-requests?status=pending&as_client=true",
+							"host": ["{{base_url}}"],
+							"path": ["service-requests"],
+							"query": [
+								{
+									"key": "status",
+									"value": "pending",
+									"description": "Filtrar por estado: pending, accepted, in_progress, completed, cancelled"
+								},
+								{
+									"key": "as_client",
+									"value": "true",
+									"description": "Ver como cliente"
+								},
+								{
+									"key": "as_worker",
+									"value": "false",
+									"description": "Ver como trabajador"
+								}
+							]
+						},
+						"description": "Lista las solicitudes. Los usuarios ven sus solicitudes como clientes, los trabajadores las suyas como trabajadores, y los admins ven todas."
+					},
+					"response": []
+				},
+				{
+					"name": "Ver Solicitud Específica",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/service-requests/:id",
+							"host": ["{{base_url}}"],
+							"path": ["service-requests", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "UUID_DE_SOLICITUD",
+									"description": "UUID de la solicitud"
+								}
+							]
+						},
+						"description": "Obtiene los detalles completos de una solicitud específica. Solo el cliente, trabajador asignado o admin pueden verla."
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Solicitud",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"accepted\",\n    \"scheduled_date\": \"2024-12-20T14:00:00Z\",\n    \"address\": \"Nueva dirección 456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/service-requests/:id",
+							"host": ["{{base_url}}"],
+							"path": ["service-requests", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "UUID_DE_SOLICITUD",
+									"description": "UUID de la solicitud"
+								}
+							]
+						},
+						"description": "Actualiza una solicitud. Los trabajadores pueden aceptar (status: 'accepted'), los clientes pueden cancelar, y ambos pueden actualizar otros campos según permisos."
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Solicitud",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/service-requests/:id",
+							"host": ["{{base_url}}"],
+							"path": ["service-requests", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "UUID_DE_SOLICITUD",
+									"description": "UUID de la solicitud"
+								}
+							]
+						},
+						"description": "Elimina una solicitud. Solo se pueden eliminar solicitudes en estado 'pending' o 'cancelled' (excepto admin)."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Reseñas",
+			"item": [
+				{
+					"name": "Crear Reseña",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"request_id\": \"UUID_DE_SOLICITUD\",\n    \"rating\": 5,\n    \"comment\": \"Excelente trabajo, muy profesional y puntual\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["reviews"]
+						},
+						"description": "Crea una reseña para una solicitud completada. Solo el cliente puede crear reseñas. Rating debe estar entre 1 y 5."
+					},
+					"response": []
+				},
+				{
+					"name": "Ver Reseñas de Trabajador",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/reviews/worker/:workerId",
+							"host": ["{{base_url}}"],
+							"path": ["reviews", "worker", ":workerId"],
+							"variable": [
+								{
+									"key": "workerId",
+									"value": "UUID_DEL_TRABAJADOR",
+									"description": "UUID del trabajador"
+								}
+							]
+						},
+						"description": "Obtiene todas las reseñas de un trabajador específico, incluyendo promedio de rating (público)"
+					},
+					"response": []
+				},
+				{
+					"name": "Ver Reseña de Solicitud",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/reviews/request/:requestId",
+							"host": ["{{base_url}}"],
+							"path": ["reviews", "request", ":requestId"],
+							"variable": [
+								{
+									"key": "requestId",
+									"value": "UUID_DE_SOLICITUD",
+									"description": "UUID de la solicitud"
+								}
+							]
+						},
+						"description": "Obtiene la reseña asociada a una solicitud específica (público)"
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Reseña",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"rating\": 4,\n    \"comment\": \"Buen trabajo, pero podría mejorar la puntualidad\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/reviews/:id",
+							"host": ["{{base_url}}"],
+							"path": ["reviews", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "UUID_DE_RESENA",
+									"description": "UUID de la reseña"
+								}
+							]
+						},
+						"description": "Actualiza una reseña. Solo el cliente que la creó puede actualizarla."
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Reseña",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/reviews/:id",
+							"host": ["{{base_url}}"],
+							"path": ["reviews", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "UUID_DE_RESENA",
+									"description": "UUID de la reseña"
+								}
+							]
+						},
+						"description": "Elimina una reseña. Solo el cliente que la creó o admin pueden eliminarla."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3900",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
