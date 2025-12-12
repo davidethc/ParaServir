@@ -11,11 +11,14 @@ export const createToken = (user) => {
         throw new Error("No se puede crear token sin email");
     }
 
-    // Si no existe user.id, se asigna null (para evitar undefined)
+    if (!user.id) {
+        throw new Error("No se puede crear token sin ID de usuario");
+    }
+
     const payload = {
-        id: user.id || null,
+        id: user.id,
         email: user.email.toLowerCase(),
-        role: user.role || null,
+        role: user.role,
 
         // Fecha de creación
         iat: moment().unix(),

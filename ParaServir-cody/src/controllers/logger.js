@@ -42,7 +42,7 @@ export const login = async (req, res) => {
         }
 
         // Generar token
-        const token = createToken(user);
+        const token = createToken({ id: user.id, email: user.email, role: user.role });
 
         return res.status(200).json({
             status: "success",
@@ -86,7 +86,7 @@ export const logout = async(req, res)=>{
             error: error.message
         })
     }
-}
+};
 
 export const verifyEmail = async(req, res)=> {
     const { token } = req.query;
@@ -124,5 +124,59 @@ export const verifyEmail = async(req, res)=> {
             message: "Token inválido o expirado",
             error: error.message,
         });
+    }
+};
+
+export const changePassword = async (req, res) => {
+    const userId = req.user.id;
+    const oldPassword = req.body.oldPassword;
+    const newPassword = req.body.newPassword;
+    let client;
+    try {
+        client = await pool.connect();
+        await client.query(`BEGIN`);
+
+        if (!oldPassword || !newPassword) {
+            await client.query(`ROLLBACK`)
+            return res.status(400).json({
+                message: "Debe proporcionar la contraseña antigua y la nueva"
+            })
+        }
+
+        const pass = await client.query(
+            `SELECT password_hash FROM users WHERE id = $1`,
+            [userId]
+        );
+
+        const match = bcrypt.compareSync(
+            oldPassword, pass.rows[0].password_hash
+        );
+
+        if (!match) {
+            await client.query(`ROLLBACK`);
+            return res.status(400).json({
+                message: "Contraseña antigua incorrecta"
+            })
+        }
+
+        const newHash = await bcrypt.hash(newPassword, 10);
+        const { rows } = await client.query(`
+           UPDATE users SET password_hash = $1 WHERE id = $2;
+        `, [newHash, userId]
+        );
+        await client.query(`COMMIT`);
+        return res.status(200).json({
+            status: "succes",
+            message: "Contraseña actualizada correctamente",
+            rows
+        })
+
+    } catch (error) {
+        return res.status(400).json({
+            status: "error",
+            errror: error.message
+        })
+    }finally{
+        client.release();
     }
 };

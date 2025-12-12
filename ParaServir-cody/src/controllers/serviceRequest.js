@@ -16,8 +16,9 @@ export const createRequest = async (req, res) => {
         });
     }
 
-    const client = await pool.connect();
+    let client;
     try {
+        client = await pool.connect();
         await client.query("BEGIN");
 
         // Verificar que la categoría existe

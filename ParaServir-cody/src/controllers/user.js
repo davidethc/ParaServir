@@ -9,13 +9,6 @@ import { createToken } from "../helpers/jwt.js";
 export const getMe = async (req, res) => {
     try {
         const userId = req.user?.id;
-        
-        if (!userId) {
-            return res.status(401).json({
-                status: "error",
-                message: "No autenticado"
-            });
-        }
 
         const { rows } = await pool.query(
             `SELECT u.id, u.email, u.role, u.is_verified, u.created_at,
@@ -147,8 +140,9 @@ export const deleteUser = async (req, res) => {
 };
 
 export const createUser = async (req, res) => {
-    const client = await pool.connect();
+    let client;
     try {
+        client = await pool.connect();
         await client.query('BEGIN');
 
         const { user, worker } = normalizeUserInput(req.body);
@@ -177,7 +171,7 @@ export const createUser = async (req, res) => {
         const newUser = insertUser.rows[0];
 
         await client.query(
-            `INSERT INTO profiles (user_id, first_name, last_name, cedula, phone, location, avatar_url)
+            `INSERT INTO profiles (user_id, first_name, last_name, cedula, phone, location)
             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
             [
                 newUser.id,
@@ -185,8 +179,7 @@ export const createUser = async (req, res) => {
                 user.last_name,
                 user.cedula || null,
                 user.phone,
-                user.location || null,
-                user.avatar_url || null
+                user.location || null
             ]
         );
 
@@ -199,7 +192,7 @@ export const createUser = async (req, res) => {
         await client.query('COMMIT');
 
         // Generar token de verificación y enlace (usando id real)
-        const verificationToken = createToken({ id: newUser.id, email: newUser.email });
+        const verificationToken = createToken({ id: newUser.id, email: newUser.email, role: newUser.role });
         const verificationLink = `http://localhost:3900/auth/verify-email?token=${verificationToken}`;
 
         // Intentar enviar email de verificación, pero no revertir la creación si falla
@@ -213,7 +206,7 @@ export const createUser = async (req, res) => {
         console.log('Verification link:', verificationLink);
 
         // Generar token de sesión y devolverlo
-        const sessionToken = createToken({ id: newUser.id, email: newUser.email });
+        const sessionToken = createToken({ id: newUser.id, email: newUser.email, role: newUser.role });
 
         // Enviar cookie HTTP-only (opcional)
         try {
@@ -246,8 +239,9 @@ export const createUser = async (req, res) => {
 
 
 export const update = async (req, res) => {
-    const client = await pool.connect();
+    let client;
     try {
+        client = await pool.connect();
         await client.query('BEGIN');
 
         const { id } = req.params;
@@ -278,7 +272,8 @@ export const update = async (req, res) => {
             `UPDATE users
              SET email = $1,
                  password_hash = $2,
-                 role = $3
+                 role = $3,
+                 updated_at = NOW()
              WHERE id = $4
              RETURNING *`,
             [
@@ -299,7 +294,7 @@ export const update = async (req, res) => {
                  cedula = $3,
                  phone = $4,
                  location = $5,
-                 avatar_url = $6
+                 updated_at = NOW()
              WHERE user_id = $7`,
             [
                 user.first_name,
@@ -307,7 +302,6 @@ export const update = async (req, res) => {
                 user.cedula || null,
                 user.phone,
                 user.location || null,
-                user.avatar_url || null,
                 id
             ]
         );

@@ -3,9 +3,6 @@ import { pool } from "../db.js";
 // Crear una reseña
 export const createReview = async (req, res) => {
     const clientId = req.user?.id;
-    if (!clientId) {
-        return res.status(401).json({ status: "error", message: "No autenticado" });
-    }
 
     const { request_id, rating, comment } = req.body;
 
@@ -23,8 +20,9 @@ export const createReview = async (req, res) => {
         });
     }
 
-    const client = await pool.connect();
+    let client;
     try {
+        client = await pool.connect();
         await client.query("BEGIN");
 
         // Verificar que la solicitud existe y pertenece al cliente
@@ -183,9 +181,6 @@ export const getRequestReview = async (req, res) => {
 // Actualizar reseña
 export const updateReview = async (req, res) => {
     const userId = req.user?.id;
-    if (!userId) {
-        return res.status(401).json({ status: "error", message: "No autenticado" });
-    }
 
     const { id } = req.params;
     const { rating, comment } = req.body;

@@ -1,14 +1,13 @@
-// middlewares/auth.js
-
 import moment from "moment";
 import jwt from "jwt-simple";
 import { secret } from "../helpers/jwt.js";
+import { pool } from "../db.js"; // ← Asegúrate de importar tu pool
 
-export const auth = (req, res, next) => {
-    let token = req.cookies?.access_token; // Usar req.cookies (requiere el middleware cookie-parser)
+export const auth = async (req, res, next) => {
+    let token = req.cookies?.access_token;
 
     if (!token) {
-        // Buscar en la cabecera (por compatibilidad o pruebas)
+        // Buscar en la cabecera
         if (req.headers.authorization) {
             token = req.headers.authorization
                 .replace(/['"]+/g, "")
@@ -16,15 +15,23 @@ export const auth = (req, res, next) => {
         } else {
             return res.status(403).json({
                 status: "error",
-                message: "La petición no tiene token de autenticación (cookie o cabecera)."
+                message: "La petición no tiene token de autenticación."
             });
         }
     }
-    
+
     try {
         const payload = jwt.decode(token, secret);
 
-        // Validar expiración (Tu código actual)
+        // Validar que el ID exista en el payload
+        if (!payload.id) {
+            return res.status(401).json({
+                status: "error",
+                message: "Token inválido. No contiene ID de usuario.",
+            });
+        }
+
+        // Validar expiración
         if (payload.exp <= moment().unix()) {
             return res.status(401).json({
                 status: "error",
@@ -32,7 +39,23 @@ export const auth = (req, res, next) => {
             });
         }
 
+        // Verificar si el usuario aún existe en la base de datos
+        const result = await pool.query(
+            "SELECT id FROM users WHERE id = $1 LIMIT 1",
+            [payload.id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(401).json({
+                status: "error",
+                message: "Token inválido. Usuario eliminado.",
+            });
+        }
+
+        // Guardar el usuario decodificado
         req.user = payload;
+
+        next();
     } catch (error) {
         return res.status(401).json({
             status: "error",
@@ -40,25 +63,4 @@ export const auth = (req, res, next) => {
             error: error.message,
         });
     }
-
-    next();
-};
-
-// Middleware para exigir rol específico
-export const requireRole = (...allowedRoles) => {
-    return (req, res, next) => {
-        if (!req.user || !req.user.role) {
-            return res.status(403).json({
-                status: "error",
-                message: "No autorizado: rol no presente en el token"
-            });
-        }
-        if (!allowedRoles.includes(req.user.role)) {
-            return res.status(403).json({
-                status: "error",
-                message: "No tienes permisos para esta acción"
-            });
-        }
-        next();
-    };
 };
