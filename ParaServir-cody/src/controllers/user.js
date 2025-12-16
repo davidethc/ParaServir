@@ -172,7 +172,7 @@ export const createUser = async (req, res) => {
 
         await client.query(
             `INSERT INTO profiles (user_id, first_name, last_name, cedula, phone, location)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            VALUES ($1, $2, $3, $4, $5, $6)`,
             [
                 newUser.id,
                 user.first_name,

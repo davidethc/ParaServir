@@ -32,7 +32,7 @@ export const auth = async (req, res, next) => {
         }
 
         // Validar expiración
-        if (payload.exp <= moment().unix()) {
+        if (payload.exp < moment().unix()) {
             return res.status(401).json({
                 status: "error",
                 message: "Token expirado",

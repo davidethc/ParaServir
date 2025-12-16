@@ -1,38 +1,26 @@
 import { pool } from "../db.js";
+import { findCategoryId } from "../helpers/categoryMapper.js";
 
 // Crear una solicitud de servicio
 export const createRequest = async (req, res) => {
     const clientId = req.user?.id;
-    if (!clientId) {
-        return res.status(401).json({ status: "error", message: "No autenticado" });
-    }
 
     const { worker_id, service_id, category_id, description, address, scheduled_date } = req.body;
-
-    if (!description || !category_id) {
-        return res.status(400).json({
-            status: "error",
-            message: "description y category_id son requeridos"
-        });
-    }
 
     let client;
     try {
         client = await pool.connect();
         await client.query("BEGIN");
 
-        // Verificar que la categoría existe
-        const categoryCheck = await client.query(
-            "SELECT id FROM service_categories WHERE id = $1",
-            [category_id]
-        );
-        if (categoryCheck.rowCount === 0) {
+        // Mapear category_id (nombre) a UUID
+        const categoryUUID = await findCategoryId(category_id);
+        if (!categoryUUID) {
             await client.query("ROLLBACK");
             return res.status(400).json({
                 status: "error",
-                message: "Categoría no encontrada"
+                message: `Categoría no encontrada: '${category_id}'`
             });
-        }
+        };
 
         // Si viene service_id, verificar que existe y pertenece al worker_id
         if (service_id) {
@@ -87,7 +75,7 @@ export const createRequest = async (req, res) => {
             request: result.rows[0]
         });
     } catch (error) {
-        try { await client.query("ROLLBACK"); } catch (_) {}
+        try { await client.query("ROLLBACK"); } catch (_) { }
         return res.status(400).json({
             status: "error",
             message: "No se pudo crear la solicitud",
@@ -101,9 +89,6 @@ export const createRequest = async (req, res) => {
 // Listar solicitudes (con filtros)
 export const listRequests = async (req, res) => {
     const userId = req.user?.id;
-    if (!userId) {
-        return res.status(401).json({ status: "error", message: "No autenticado" });
-    }
 
     const { role } = req.user;
     const { status, as_client, as_worker } = req.query;
@@ -259,7 +244,7 @@ export const updateRequest = async (req, res) => {
         const request = currentRequest.rows[0];
 
         // Verificar permisos
-        const canUpdate = 
+        const canUpdate =
             role === 'admin' ||
             (role === 'trabajador' && request.worker_id === userId) ||
             (role === 'usuario' && request.client_id === userId);
@@ -359,7 +344,7 @@ export const updateRequest = async (req, res) => {
             request: result.rows[0]
         });
     } catch (error) {
-        try { await client.query("ROLLBACK"); } catch (_) {}
+        try { await client.query("ROLLBACK"); } catch (_) { }
         return res.status(400).json({
             status: "error",
             message: "No se pudo actualizar la solicitud",
@@ -373,9 +358,6 @@ export const updateRequest = async (req, res) => {
 // Eliminar/Cancelar solicitud
 export const deleteRequest = async (req, res) => {
     const userId = req.user?.id;
-    if (!userId) {
-        return res.status(401).json({ status: "error", message: "No autenticado" });
-    }
 
     const { id } = req.params;
     const { role } = req.user;
@@ -396,18 +378,6 @@ export const deleteRequest = async (req, res) => {
 
         const request = requestCheck.rows[0];
 
-        // Verificar permisos: solo cliente, trabajador asignado o admin pueden eliminar
-        const canDelete = 
-            role === 'admin' ||
-            (role === 'usuario' && request.client_id === userId) ||
-            (role === 'trabajador' && request.worker_id === userId);
-
-        if (!canDelete) {
-            return res.status(403).json({
-                status: "error",
-                message: "No tienes permisos para eliminar esta solicitud"
-            });
-        }
 
         // Solo se pueden eliminar solicitudes en estado 'pending' o 'cancelled'
         if (request.status !== 'pending' && request.status !== 'cancelled' && role !== 'admin') {

@@ -59,12 +59,13 @@ export async function createServices(req, res) {
         });
 
     } catch (error) {
+        console.log(error);
         try {
             await client.query("ROLLBACK");
         } catch (e) {
             // ignore rollback error
         }
-        res.status(500).json({
+        res.status(400).json({
             status: "error",
             message: "No se pudo crear el servicio.",
             error: error.message
@@ -80,7 +81,7 @@ export async function updateService(req, res) {
         client = await pool.connect();
         const userId = req.user.id;
         const {id} = req.params;
-        const { category_id, title, description, base_price } = req.body;
+        const service = req.resource; // Recurso obtenido del middleware checkOwnership
         
         await client.query(`BEGIN`);
 
@@ -102,14 +103,6 @@ export async function updateService(req, res) {
             return res.status(400).json({
                 status: "error",
                 message: `Categoría no encontrada: '${category_id}'`
-            });
-        }
-
-        if (exist.rows[0].worker_id !== userId) {
-            await client.query(`ROLLBACK`);
-            return res.status(403).json({
-                status: "error",
-                message: "No tienes permisos para actualizar este servicio"
             });
         }
 
@@ -249,5 +242,49 @@ export const watchService = async (req, res) => {
             message: "Error al mostrar el servicio",
             error: error.message
         })
+    }
+};
+
+export const available = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 1. Consultar el estado actual
+        const query = await pool.query(
+            `SELECT is_available FROM worker_services WHERE id = $1`,
+            [id]
+        );
+
+        if (query.rows.length === 0) {
+            return res.status(404).json({
+                status: "error",
+                message: "Servicio no encontrado"
+            });
+        }
+
+        const currentState = query.rows[0].is_available;
+        const newState = !currentState; // Toggle (true → false, false → true)
+
+        // 2. Actualizar el estado
+        const update = await pool.query(
+            `UPDATE worker_services 
+             SET is_available = $1 
+             WHERE id = $2
+             RETURNING id, is_available`,
+            [newState, id]
+        );
+
+        return res.status(200).json({
+            status: "success",
+            message: "Estado actualizado",
+            data: update.rows[0]
+        });
+
+    } catch (error) {
+        return res.status(400).json({
+            status: "error",
+            message: "No se pudo cambiar el estado del servicio",
+            error: error.message
+        });
     }
 };
