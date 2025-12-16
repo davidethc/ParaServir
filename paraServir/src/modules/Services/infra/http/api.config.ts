@@ -8,7 +8,7 @@ export const API_CONFIG = {
     endpoints: {
         services: {
             base: '/services',
-            createBasic: '/workers/services',
+            createBasic: '/services/create',
         },
     },
 };

@@ -129,9 +129,13 @@ export function CreateBasicServiceForm() {
         return;
       }
 
+      // Obtener el nombre de la categoría seleccionada para enviarlo al backend
+      const selectedCategory = categories.find(c => c.id === categoryId);
+      const categoryName = selectedCategory ? selectedCategory.name : categoryId;
+
       const response = await serviceController.createBasicService({
         userId: finalUserId,
-        category_id: categoryId,
+        category_id: categoryName,
         title: serviceName,
         description: description,
         price_type: priceType,

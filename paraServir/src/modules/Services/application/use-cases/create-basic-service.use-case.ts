@@ -16,9 +16,9 @@ export class CreateBasicServiceUseCase {
         // Modo mock para desarrollo
         if (USE_MOCK_DATA) {
             await simulateNetworkDelay(800);
-            
+
             const serviceId = `service-${Date.now()}`;
-            
+
             return {
                 serviceId,
                 message: "Servicio creado exitosamente",
@@ -34,47 +34,52 @@ export class CreateBasicServiceUseCase {
             // Calcular base_price basado en price_range si es hourly
             let basePrice: number | null = null;
             if (dto.price_type === 'hourly' && dto.price_range) {
-                const [min, max] = dto.price_range.split('-').map(Number);
-                basePrice = max ? (min + max) / 2 : min; // Promedio del rango
+                if (dto.price_range.includes('+')) {
+                    basePrice = Number(dto.price_range.replace('+', ''));
+                } else {
+                    const [min, max] = dto.price_range.split('-').map(Number);
+                    basePrice = max ? (min + max) / 2 : min; // Promedio del rango
+                }
             }
 
             // Usar HttpClientService para manejar automáticamente el token
             const httpClient = new HttpClientService({ baseUrl: this.apiUrl });
 
-            // El backend espera un array de services
+            // ✅ El backend espera los campos directamente, NO en un array services
             const requestBody = {
-                services: [{
-                    category_id: dto.category_id,
-                    title: dto.title,
-                    description: dto.description,
-                    base_price: basePrice,
-                }]
+                category_id: dto.category_id,
+                title: dto.title,
+                description: dto.description,
+                base_price: basePrice,
             };
 
             console.log("Enviando petición a:", `${this.apiUrl}${API_CONFIG.endpoints.services.createBasic}`);
             console.log("Body:", requestBody);
             console.log("Token presente:", !!token);
             console.log("Token (primeros 20 chars):", token.substring(0, 20) + "...");
+            console.log("Headers que se enviarán:", {
+                'Authorization': `Bearer ${token.substring(0, 20)}...`
+            });
 
             // Usar el token pasado como parámetro directamente en los headers
-            // Esto asegura que usamos el token correcto, no el de localStorage
             const data = await httpClient.post<{
                 status?: string;
                 message?: string;
-                services?: Array<{ id: string; title: string; description: string; base_price: number }>;
+                service?: { id: string; title: string; description: string; base_price: number };
                 serviceId?: string;
             }>(API_CONFIG.endpoints.services.createBasic, requestBody, {
                 'Authorization': `Bearer ${token}`
             });
-            
+
             console.log("Respuesta del backend:", data);
-            
+
             return {
-                serviceId: data.services?.[0]?.id || data.serviceId || `service-${Date.now()}`,
+                serviceId: data.service?.id || data.serviceId || `service-${Date.now()}`,
                 message: data.message || "Servicio creado exitosamente",
                 nextStep: "login",
             };
         } catch (error) {
+            console.error("Error completo del backend:", error);
             // Manejar errores específicos
             if (error instanceof Error) {
                 // Si el error menciona 403 o "No autorizado", verificar el rol
@@ -90,4 +95,4 @@ export class CreateBasicServiceUseCase {
             throw new Error('Error al crear servicio');
         }
     }
-}
+};

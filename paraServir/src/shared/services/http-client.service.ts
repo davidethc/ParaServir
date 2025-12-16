@@ -1,3 +1,5 @@
+import axios, { type AxiosInstance } from 'axios';
+
 /**
  * Servicio HTTP centralizado para todas las peticiones al backend
  * - Agrega token automáticamente
@@ -11,15 +13,16 @@ export interface HttpClientConfig {
 }
 
 export class HttpClientService {
-  private baseUrl: string;
-  private defaultHeaders: Record<string, string>;
+  private axiosInstance: AxiosInstance;
 
   constructor(config: HttpClientConfig) {
-    this.baseUrl = config.baseUrl;
-    this.defaultHeaders = {
-      'Content-Type': 'application/json',
-      ...config.headers,
-    };
+    this.axiosInstance = axios.create({
+      baseURL: config.baseUrl,
+      headers: {
+        'Content-Type': 'application/json',
+        ...config.headers,
+      },
+    });
   }
 
   /**
@@ -36,7 +39,7 @@ export class HttpClientService {
    * Si se pasa Authorization en customHeaders, tiene prioridad sobre el token de localStorage
    */
   private buildHeaders(customHeaders?: Record<string, string>): Record<string, string> {
-    const headers = { ...this.defaultHeaders, ...customHeaders };
+    const headers = { ...customHeaders };
 
     // Si no se pasó Authorization en customHeaders, usar el token de localStorage
     if (!headers['Authorization']) {
@@ -52,15 +55,20 @@ export class HttpClientService {
   /**
    * Maneja errores de respuesta
    */
-  private async handleError(response: Response): Promise<never> {
+  private handleError(error: unknown): never {
     let errorMessage = 'Error en la petición';
     
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
-    } catch {
-      // Si no se puede parsear JSON, usar el mensaje por defecto
-      errorMessage = `Error ${response.status}: ${response.statusText}`;
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        const errorData = error.response.data;
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } else if (error.request) {
+        errorMessage = 'No se recibió respuesta del servidor';
+      } else {
+        errorMessage = error.message;
+      }
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
     }
 
     throw new Error(errorMessage);
@@ -70,70 +78,55 @@ export class HttpClientService {
    * Realiza una petición GET
    */
   async get<T>(endpoint: string, headers?: Record<string, string>): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: this.buildHeaders(headers),
-    });
-
-    if (!response.ok) {
-      await this.handleError(response);
+    try {
+      const response = await this.axiosInstance.get<T>(endpoint, {
+        headers: this.buildHeaders(headers),
+      });
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
     }
-
-    return response.json();
   }
 
   /**
    * Realiza una petición POST
    */
   async post<T>(endpoint: string, data?: unknown, headers?: Record<string, string>): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: this.buildHeaders(headers),
-      body: data ? JSON.stringify(data) : undefined,
-    });
-
-    if (!response.ok) {
-      await this.handleError(response);
+    try {
+      const response = await this.axiosInstance.post<T>(endpoint, data, {
+        headers: this.buildHeaders(headers),
+      });
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
     }
-
-    return response.json();
   }
 
   /**
    * Realiza una petición PUT
    */
   async put<T>(endpoint: string, data?: unknown, headers?: Record<string, string>): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: this.buildHeaders(headers),
-      body: data ? JSON.stringify(data) : undefined,
-    });
-
-    if (!response.ok) {
-      await this.handleError(response);
+    try {
+      const response = await this.axiosInstance.put<T>(endpoint, data, {
+        headers: this.buildHeaders(headers),
+      });
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
     }
-
-    return response.json();
   }
 
   /**
    * Realiza una petición DELETE
    */
   async delete<T>(endpoint: string, headers?: Record<string, string>): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const response = await fetch(url, {
-      method: 'DELETE',
-      headers: this.buildHeaders(headers),
-    });
-
-    if (!response.ok) {
-      await this.handleError(response);
+    try {
+      const response = await this.axiosInstance.delete<T>(endpoint, {
+        headers: this.buildHeaders(headers),
+      });
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
     }
-
-    return response.json();
   }
 }
-
