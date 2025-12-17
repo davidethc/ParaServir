@@ -22,6 +22,15 @@ export const createRequest = async (req, res) => {
             });
         };
 
+        if (!service_id && !worker_id) {
+            await client.query("ROLLBACK");
+            return res.status(400).json({
+                status: "error",
+                message: "Debe especificar un servicio o un trabajador"
+            });
+        }
+
+
         // Si viene service_id, verificar que existe y pertenece al worker_id
         if (service_id) {
             const serviceCheck = await client.query(
@@ -64,7 +73,7 @@ export const createRequest = async (req, res) => {
              (client_id, worker_id, service_id, category_id, description, address, scheduled_date, status)
              VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
              RETURNING *`,
-            [clientId, worker_id || null, service_id || null, category_id, description, address || null, scheduled_date || null]
+            [clientId, worker_id || null, service_id || null, categoryUUID, description, address || null, scheduled_date || null]
         );
 
         await client.query("COMMIT");

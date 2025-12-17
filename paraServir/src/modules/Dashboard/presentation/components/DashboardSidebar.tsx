@@ -31,28 +31,6 @@ interface NavItem {
   badge?: number;
 }
 
-const mainNavItems: NavItem[] = [
-  { label: "Inicio", icon: Home, path: ROUTES.DASHBOARD.HOME },
-  {
-    label: "Categorías",
-    icon: FolderTree,
-    path: ROUTES.DASHBOARD.CATEGORIES,
-    hasSubmenu: true,
-  },
-  {
-    label: "Solicitudes",
-    icon: FileText,
-    path: ROUTES.DASHBOARD.REQUESTS,
-    hasSubmenu: true,
-  },
-  {
-    label: "Chats",
-    icon: MessageSquare,
-    path: ROUTES.DASHBOARD.CHATS,
-    hasSubmenu: true,
-  },
-];
-
 export function DashboardSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -60,6 +38,28 @@ export function DashboardSidebar() {
   const user = useSelector((state: RootState) => state.auth.user);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  const mainNavItems: NavItem[] = [
+    { label: "Inicio", icon: Home, path: ROUTES.DASHBOARD.HOME },
+    {
+      label: "Categorías",
+      icon: FolderTree,
+      path: ROUTES.DASHBOARD.CATEGORIES,
+      hasSubmenu: true,
+    },
+    {
+      label: user?.role === "trabajador" ? "Servicios" : "Solicitudes",
+      icon: FileText,
+      path: ROUTES.DASHBOARD.REQUESTS,
+      hasSubmenu: true,
+    },
+    {
+      label: "Chats",
+      icon: MessageSquare,
+      path: ROUTES.DASHBOARD.CHATS,
+      hasSubmenu: true,
+    },
+  ];
 
   const handleLogout = () => {
     // Limpiar todos los datos de autenticación usando servicio centralizado
@@ -156,7 +156,44 @@ export function DashboardSidebar() {
                   </button>
                   {expanded && (
                     <div className="ml-6 mt-1 space-y-1">
-                      {/* Submenús pueden agregarse aquí */}
+                      {/* CASO: Servicios / Solicitudes */}
+                      {item.label === "Servicios" && user?.role === "trabajador" && (
+                        <>
+                          <Link
+                            to={ROUTES.DASHBOARD.CREATE_SERVICE}
+                            className="block px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg"
+                          >
+                            Crear servicio
+                          </Link>
+
+                          <Link
+                            to={ROUTES.DASHBOARD.REQUESTS}
+                            className="block px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg"
+                          >
+                            Ver mis servicios
+                          </Link>
+                        </>
+                      )}
+
+                      {item.label === "Solicitudes" && user?.role === "usuario" && (
+                        <>
+                          <Link
+                            to={ROUTES.DASHBOARD.CREATE_REQUEST}
+                            className="block px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg"
+                          >
+                            Crear solicitud
+                          </Link>
+
+                          <Link
+                            to={ROUTES.DASHBOARD.REQUESTS}
+                            className="block px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg"
+                          >
+                            Ver mis solicitudes
+                          </Link>
+                        </>
+                      )}
+
+                      {/* fallback */}
                       <Link
                         to={item.path}
                         className="block px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg"
@@ -165,6 +202,7 @@ export function DashboardSidebar() {
                       </Link>
                     </div>
                   )}
+
                 </>
               ) : (
                 <Link to={item.path}>

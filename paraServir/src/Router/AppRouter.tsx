@@ -15,7 +15,6 @@ import { DashboardLayout } from "@/modules/Dashboard/infra/layouts/DashboardLayo
 import { DashboardHomePage } from "@/modules/Dashboard/presentation/pages/DashboardHomePage";
 import { DashboardCategoriesPage } from "@/modules/Dashboard/presentation/pages/DashboardCategoriesPage";
 import { DashboardCategoryDetailPage } from "@/modules/Dashboard/presentation/pages/DashboardCategoryDetailPage";
-import { DashboardRequestsPage } from "@/modules/Dashboard/presentation/pages/DashboardRequestsPage";
 import { DashboardChatsPage } from "@/modules/Dashboard/presentation/pages/DashboardChatsPage";
 import { DashboardHelpPage } from "@/modules/Dashboard/presentation/pages/DashboardHelpPage";
 import { DashboardSettingsPage } from "@/modules/Dashboard/presentation/pages/DashboardSettingsPage";
@@ -29,6 +28,8 @@ import { RoleProtectedRoute } from "@/shared/infra/guards/RoleProtectedRoute";
 import { ROUTES } from "@/shared/constants/routes.constants";
 import { EmptyState } from "@/shared/components/feedback/EmptyState";
 import { ProfileSettingsPage } from "@/modules/Settings/Presentation/Pages/ProfileSettingsPage";
+import { ServiceRequestsPage } from "@/modules/ServiceRequests/presentation/pages/ServiceRequestsPage";
+import { CreateServiceRequestPage } from "@/modules/ServiceRequests/presentation/pages/CreateServiceRequestPage";
 
 export function AppRouter() {
   return (
@@ -73,7 +74,8 @@ export function AppRouter() {
           <Route index element={<DashboardHomePage />} />
           <Route path="categories" element={<DashboardCategoriesPage />} />
           <Route path="categories/:id" element={<DashboardCategoryDetailPage />} />
-          <Route path="requests" element={<DashboardRequestsPage />} />
+          <Route path="requests" element={<ServiceRequestsPage />} />
+          <Route path="requests/create" element={<CreateServiceRequestPage />} />
           <Route path="chats" element={<DashboardChatsPage />} />
           <Route path="help" element={<DashboardHelpPage />} />
           <Route path="settings" element={<DashboardSettingsPage />}>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { updateUser } from "../Services/Settings.service.ts";
+import { updateUser } from "../Services/settings.service";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/Store";
 import axios from "axios";
