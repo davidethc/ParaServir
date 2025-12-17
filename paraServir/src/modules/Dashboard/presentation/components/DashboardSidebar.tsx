@@ -4,7 +4,6 @@ import { ROUTES } from "@/shared/constants/routes.constants";
 import { useDispatch, useSelector } from "react-redux";
 import { AuthStorageService } from "@/shared/services/auth-storage.service";
 import {
-  LayoutDashboard,
   Home,
   FolderTree,
   FileText,
@@ -122,19 +121,7 @@ export function DashboardSidebar() {
           </div>
         </div>
 
-        {/* Botón Dashboard */}
-        <Link to={ROUTES.DASHBOARD.HOME}>
-          <Button
-            variant={isActive(ROUTES.DASHBOARD.HOME) ? "default" : "ghost"}
-            className={cn(
-              "w-full justify-start gap-2",
-              isActive(ROUTES.DASHBOARD.HOME) && "bg-blue-600 text-white hover:bg-blue-700"
-            )}
-          >
-            <LayoutDashboard className="h-4 w-4" />
-            Dashboard
-          </Button>
-        </Link>
+
       </div>
 
       {/* Navegación principal */}

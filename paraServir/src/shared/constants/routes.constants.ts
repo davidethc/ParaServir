@@ -73,17 +73,17 @@ export const isProtectedRoute = (path: string): boolean => {
  * Verificar si una ruta es pública
  */
 export const isPublicRoute = (path: string): boolean => {
-  return Object.values(ROUTES.PUBLIC).includes(path as any);
+  return (Object.values(ROUTES.PUBLIC) as string[]).includes(path);
 };
 
 /**
  * Obtener la ruta de redirección después del login según el rol
  * Usuarios normales van a ver categorías de servicios
- * Trabajadores van a completar su perfil o crear servicios
+ * Trabajadores van directamente al dashboard (crear servicio solo en registro)
  */
 export const getPostLoginRoute = (role: string): string => {
   if (role === "trabajador") {
-    return ROUTES.WORKER.CREATE_SERVICE;
+    return ROUTES.DASHBOARD.CATEGORIES;
   }
   // Usuarios normales van directamente a ver las categorías de servicios
   return ROUTES.DASHBOARD.CATEGORIES;
