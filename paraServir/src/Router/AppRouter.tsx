@@ -27,6 +27,8 @@ import { RoleProtectedRoute } from "@/shared/infra/guards/RoleProtectedRoute";
 
 // Constantes de rutas
 import { ROUTES } from "@/shared/constants/routes.constants";
+import { EmptyState } from "@/shared/components/feedback/EmptyState";
+import { ProfileSettingsPage } from "@/modules/Settings/Presentation/Pages/ProfileSettingsPage";
 
 export function AppRouter() {
   return (
@@ -74,7 +76,16 @@ export function AppRouter() {
           <Route path="requests" element={<DashboardRequestsPage />} />
           <Route path="chats" element={<DashboardChatsPage />} />
           <Route path="help" element={<DashboardHelpPage />} />
-          <Route path="settings" element={<DashboardSettingsPage />} />
+          <Route path="settings" element={<DashboardSettingsPage />}>
+            <Route index element={
+              <EmptyState
+                title="Configuración"
+                description="Selecciona una opción"
+              />
+            } />
+            <Route path="profile" element={<ProfileSettingsPage />} />
+          </Route>
+
         </Route>
 
         {/* Rutas protegidas por rol - solo para trabajadores */}
