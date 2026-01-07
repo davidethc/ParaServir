@@ -1,7 +1,8 @@
 import { Card } from "@/shared/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { Badge } from "@/shared/components/ui/badge";
-import { MapPin, CheckCircle } from "lucide-react";
+import { Button } from "@/shared/components/ui/button";
+import { MapPin, CheckCircle2, Star, Briefcase, TrendingUp } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 
 interface WorkerCardProps {
@@ -17,13 +18,15 @@ interface WorkerCardProps {
   servicesCount: number;
   minPrice?: number;
   maxPrice?: number;
+  rating?: number;
+  completedJobs?: number;
   onClick?: (workerId: string) => void;
   className?: string;
 }
 
 /**
- * Card unificado para mostrar información de trabajadores
- * Reutilizable y consistente en toda la aplicación
+ * Card profesional para mostrar información de trabajadores
+ * Diseño tipo marketplace con jerarquía visual clara y información destacada
  */
 export function WorkerCard({
   workerId,
@@ -33,9 +36,12 @@ export function WorkerCard({
   location,
   yearsExperience,
   verificationStatus,
+  isActive,
   servicesCount,
   minPrice,
   maxPrice,
+  rating,
+  completedJobs,
   onClick,
   className,
 }: WorkerCardProps) {
@@ -47,12 +53,14 @@ export function WorkerCard({
 
   const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   const isVerified = verificationStatus === "verified";
+  const fullName = `${firstName} ${lastName}`;
 
   return (
     <Card
       className={cn(
-        "p-4 hover:shadow-lg transition-shadow",
+        "group relative overflow-hidden border border-border bg-card",
         onClick && "cursor-pointer",
+        !isActive && "opacity-75",
         className
       )}
       onClick={handleClick}
@@ -65,46 +73,96 @@ export function WorkerCard({
         }
       } : undefined}
     >
-      <div className="flex items-start gap-4">
-        <Avatar className="h-12 w-12 flex-shrink-0">
-          <AvatarImage src={avatarUrl} alt={`${firstName} ${lastName}`} />
-          <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-semibold text-gray-900 truncate">
-              {firstName} {lastName}
-            </h3>
-            {isVerified && (
-              <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-            )}
-          </div>
-          
-          {yearsExperience !== undefined && yearsExperience > 0 && (
-            <p className="text-sm text-gray-600 mb-2">
-              {yearsExperience} {yearsExperience === 1 ? "año" : "años"} de experiencia
-            </p>
-          )}
-          
-          {location && (
-            <div className="flex items-center gap-1 text-sm text-gray-500 mb-2">
-              <MapPin className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate">{location}</span>
+      {/* Header con gradiente sutil */}
+      <div className="relative h-20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+      </div>
+
+      {/* Contenido principal */}
+      <div className="px-5 pb-5 -mt-12 relative">
+        {/* Avatar destacado */}
+        <div className="relative inline-block mb-3">
+          <Avatar className="h-20 w-20 border-4 border-background ring-4 ring-primary/10 shadow-lg">
+            <AvatarImage src={avatarUrl} alt={fullName} />
+            <AvatarFallback className="bg-primary text-primary-foreground font-bold text-lg">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          {isVerified && (
+            <div className="absolute -bottom-1 -right-1 bg-success rounded-full p-1 shadow-md border-2 border-background">
+              <CheckCircle2 className="h-4 w-4 text-success-foreground" />
             </div>
           )}
+        </div>
+
+        {/* Nombre y verificación */}
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">
+              {fullName}
+            </h3>
+          </div>
           
-          {minPrice !== undefined && maxPrice !== undefined && 
-           minPrice !== null && maxPrice !== null && (
-            <p className="text-sm font-medium text-blue-600 mb-2">
+          {/* Stats rápidas */}
+          <div className="flex items-center gap-3 flex-wrap mt-2">
+            {rating !== undefined && rating > 0 && (
+              <div className="flex items-center gap-1 text-sm">
+                <Star className="h-4 w-4 fill-warning text-warning" />
+                <span className="font-semibold text-foreground">{rating.toFixed(1)}</span>
+              </div>
+            )}
+            {completedJobs !== undefined && completedJobs > 0 && (
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <Briefcase className="h-4 w-4" />
+                <span>{completedJobs} trabajos</span>
+              </div>
+            )}
+            {yearsExperience !== undefined && yearsExperience > 0 && (
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <TrendingUp className="h-4 w-4" />
+                <span>{yearsExperience} {yearsExperience === 1 ? "año" : "años"}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Ubicación */}
+        {location && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+            <MapPin className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">{location}</span>
+          </div>
+        )}
+
+        {/* Rango de precios destacado */}
+        {minPrice !== undefined && maxPrice !== undefined && 
+         minPrice !== null && maxPrice !== null && (
+          <div className="mb-4 p-3 bg-success-light rounded-lg border border-success/20">
+            <p className="text-xs font-medium text-muted-foreground mb-1">Rango de precios</p>
+            <p className="text-xl font-bold text-success">
               ${Number(minPrice).toFixed(2)} - ${Number(maxPrice).toFixed(2)}
             </p>
-          )}
-          
-          <Badge variant="secondary" className="text-xs">
-            {servicesCount} servicio{servicesCount !== 1 ? "s" : ""}
+          </div>
+        )}
+
+        {/* Footer con servicios y CTA */}
+        <div className="flex items-center justify-between pt-4 border-t border-border/50">
+          <Badge variant="secondary" className="font-medium">
+            {servicesCount} servicio{servicesCount !== 1 ? "s" : ""} disponible{servicesCount !== 1 ? "s" : ""}
           </Badge>
+          
+          {onClick && isActive && (
+            <Button
+              size="sm"
+              className="bg-primary hover:bg-primary-hover text-primary-foreground font-semibold"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClick();
+              }}
+            >
+              Ver perfil
+            </Button>
+          )}
         </div>
       </div>
     </Card>

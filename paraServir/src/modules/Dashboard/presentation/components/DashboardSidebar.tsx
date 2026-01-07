@@ -3,12 +3,14 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ROUTES } from "@/shared/constants/routes.constants";
 import { useDispatch, useSelector } from "react-redux";
 import { AuthStorageService } from "@/shared/services/auth-storage.service";
+import { isWorker, USER_ROLES } from "@/shared/constants/user-roles.constants";
 import {
   LayoutDashboard,
   Home,
   FolderTree,
   FileText,
   MessageSquare,
+  Briefcase,
   HelpCircle,
   Settings,
   Sun,
@@ -32,26 +34,17 @@ interface NavItem {
   badge?: number;
 }
 
-const mainNavItems: NavItem[] = [
+const userNavItems: NavItem[] = [
   { label: "Inicio", icon: Home, path: ROUTES.DASHBOARD.HOME },
-  {
-    label: "Categorías",
-    icon: FolderTree,
-    path: ROUTES.DASHBOARD.CATEGORIES,
-    hasSubmenu: true,
-  },
-  {
-    label: "Solicitudes",
-    icon: FileText,
-    path: ROUTES.DASHBOARD.REQUESTS,
-    hasSubmenu: true,
-  },
-  {
-    label: "Chats",
-    icon: MessageSquare,
-    path: ROUTES.DASHBOARD.CHATS,
-    hasSubmenu: true,
-  },
+  { label: "Categorías", icon: FolderTree, path: ROUTES.DASHBOARD.CATEGORIES, hasSubmenu: true },
+  { label: "Solicitudes", icon: FileText, path: ROUTES.DASHBOARD.REQUESTS, hasSubmenu: true },
+  { label: "Chats", icon: MessageSquare, path: ROUTES.DASHBOARD.CHATS, hasSubmenu: true },
+];
+
+const workerNavItems: NavItem[] = [
+  { label: "Mis servicios", icon: Briefcase, path: ROUTES.DASHBOARD.SERVICES },
+  { label: "Solicitudes", icon: FileText, path: ROUTES.DASHBOARD.REQUESTS, hasSubmenu: true },
+  { label: "Chats", icon: MessageSquare, path: ROUTES.DASHBOARD.CHATS, hasSubmenu: true },
 ];
 
 export function DashboardSidebar() {
@@ -61,6 +54,9 @@ export function DashboardSidebar() {
   const user = useSelector((state: RootState) => state.auth.user);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  const role = user?.role || AuthStorageService.getUserRole() || USER_ROLES.USUARIO;
+  const navItems = isWorker(role) ? workerNavItems : userNavItems;
 
   const handleLogout = () => {
     // Limpiar todos los datos de autenticación usando servicio centralizado
@@ -105,18 +101,18 @@ export function DashboardSidebar() {
   };
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-screen sticky top-0">
+    <aside className="w-64 bg-card border-r border-border flex flex-col h-screen sticky top-0">
       {/* Header con perfil */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-border">
         <div className="flex items-center gap-3 mb-4">
           <Avatar className="h-10 w-10">
             <AvatarImage src="" alt={user?.email || "Usuario"} />
-            <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
+            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
               {getUserInitials()}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
+            <p className="text-sm font-medium text-foreground truncate">
               Bienvenido {getUserDisplayName()}
             </p>
           </div>
@@ -126,10 +122,7 @@ export function DashboardSidebar() {
         <Link to={ROUTES.DASHBOARD.HOME}>
           <Button
             variant={isActive(ROUTES.DASHBOARD.HOME) ? "default" : "ghost"}
-            className={cn(
-              "w-full justify-start gap-2",
-              isActive(ROUTES.DASHBOARD.HOME) && "bg-blue-600 text-white hover:bg-blue-700"
-            )}
+            className="w-full justify-start gap-2"
           >
             <LayoutDashboard className="h-4 w-4" />
             Dashboard
@@ -139,7 +132,7 @@ export function DashboardSidebar() {
 
       {/* Navegación principal */}
       <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-        {mainNavItems.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
           const expanded = expandedItems.has(item.label);
@@ -151,10 +144,10 @@ export function DashboardSidebar() {
                   <button
                     onClick={() => toggleSubmenu(item.label)}
                     className={cn(
-                      "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                      "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                       active
-                        ? "bg-blue-50 text-blue-700"
-                        : "text-gray-700 hover:bg-gray-100"
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "text-muted-foreground hover:bg-accent-soft hover:text-primary"
                     )}
                   >
                     <div className="flex items-center gap-2">
@@ -172,7 +165,7 @@ export function DashboardSidebar() {
                       {/* Submenús pueden agregarse aquí */}
                       <Link
                         to={item.path}
-                        className="block px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg"
+                        className="block px-3 py-2 text-sm text-muted-foreground hover:text-primary hover:bg-accent-soft rounded-lg transition-colors"
                       >
                         Ver todos
                       </Link>
@@ -184,8 +177,10 @@ export function DashboardSidebar() {
                   <Button
                     variant="ghost"
                     className={cn(
-                      "w-full justify-start gap-2",
-                      active && "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                      "w-full justify-start gap-2 font-medium transition-all duration-200",
+                      active 
+                        ? "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary" 
+                        : "text-muted-foreground hover:bg-accent-soft hover:text-primary"
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -199,7 +194,7 @@ export function DashboardSidebar() {
       </nav>
 
       {/* Footer con utilidades */}
-      <div className="p-4 border-t border-gray-200 space-y-2">
+      <div className="p-4 border-t border-border space-y-2">
         {/* Centro de Ayuda */}
         <Link to={ROUTES.DASHBOARD.HELP}>
           <Button variant="ghost" className="w-full justify-start gap-2 relative">
@@ -223,15 +218,12 @@ export function DashboardSidebar() {
         </Link>
 
         {/* Toggle de tema */}
-        <div className="flex items-center gap-2 p-2 bg-gray-100 rounded-lg">
+        <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
           <Button
             variant={theme === "light" ? "default" : "ghost"}
             size="sm"
             onClick={toggleTheme}
-            className={cn(
-              "flex-1 gap-2",
-              theme === "light" && "bg-blue-600 text-white hover:bg-blue-700"
-            )}
+            className="flex-1 gap-2"
           >
             <Sun className="h-4 w-4" />
             Claro
@@ -240,10 +232,7 @@ export function DashboardSidebar() {
             variant={theme === "dark" ? "default" : "ghost"}
             size="sm"
             onClick={toggleTheme}
-            className={cn(
-              "flex-1 gap-2",
-              theme === "dark" && "bg-blue-600 text-white hover:bg-blue-700"
-            )}
+            className="flex-1 gap-2"
           >
             <Moon className="h-4 w-4" />
             Oscuro
@@ -253,7 +242,7 @@ export function DashboardSidebar() {
         {/* Cerrar sesión */}
         <Button
           variant="ghost"
-          className="w-full justify-start gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+          className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive-light"
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4" />

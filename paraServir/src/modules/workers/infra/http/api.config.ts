@@ -13,7 +13,9 @@ export const API_CONFIG = {
     endpoints: {
         workers: {
             base: '/workers',
-            completeProfile: '/workers/complete-profile',
+            completeProfile: '/workers/profile', // Endpoint real del backend
+            watch: (id: string) => `/workers/watch/${id}`,
+            list: '/workers/list',
         },
     },
 };

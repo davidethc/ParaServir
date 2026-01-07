@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { ROUTES } from "@/shared/constants/routes.constants";
-import { AuthStorageService } from "@/shared/services/auth-storage.service";
 import { Input } from "@/shared/components/ui/input";
 import { Select } from "@/shared/components/ui/select";
 import { Button } from "@/shared/components/ui/button";
@@ -16,9 +15,12 @@ import {
   SelectItem
 } from "@/shared/components/ui/select";
 import { WorkerHttpController } from "@/modules/workers/infra/http/controllers/worker-http.controller";
-import { ServiceCategoryController } from "@/modules/ServiceCategories/infra/http/controllers/service-category.controller";
-import type { ServiceCategoryDto } from "@/modules/ServiceCategories/application/dto/service-category.dto";
+import { ServiceController } from "@/modules/Services/infra/http/controllers/service.controller";
 import type { WorkerServiceDto } from "@/modules/workers/Application/dto/complete-worker-profile.dto";
+import { useCategories } from "@/shared/hooks/useCategories";
+import { useAuth } from "@/shared/hooks/useAuth";
+import { useMe } from "@/shared/hooks/useMe";
+import { LoadingState } from "@/shared/components/feedback/LoadingState";
 
 interface ServiceForm {
   category_id: string;
@@ -28,56 +30,77 @@ interface ServiceForm {
 }
 
 export function CompleteWorkerProfileForm() {
-  const location = useLocation();
   const navigate = useNavigate();
-  
-  // Obtener userId y token usando servicio centralizado
-  const userId = location.state?.userId || AuthStorageService.getUserId() || "";
-  const token = location.state?.token || AuthStorageService.getToken() || "";
+  const { getUserId, getToken } = useAuth();
+  const { categories, loading: loadingCategories, error: categoriesError } = useCategories();
+  const { user: currentUser, loading: loadingUser, refetch: refetchUser } = useMe();
 
   const [yearsExperience, setYearsExperience] = useState("");
   const [certificationUrl, setCertificationUrl] = useState("");
   const [services, setServices] = useState<ServiceForm[]>([
     { category_id: "", title: "", description: "", base_price: "" }
   ]);
-  const [categories, setCategories] = useState<ServiceCategoryDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadingCategories, setLoadingCategories] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadingExistingData, setLoadingExistingData] = useState(true);
 
-  const workerController = new WorkerHttpController();
+  const workerController = useMemo(() => new WorkerHttpController(), []);
+  const serviceController = useMemo(() => new ServiceController(), []);
+
+  // Cargar datos existentes del trabajador
+  useEffect(() => {
+    const loadExistingData = async () => {
+      if (!currentUser || currentUser.role !== "trabajador" || !currentUser.id) {
+        setLoadingExistingData(false);
+        return;
+      }
+
+      try {
+        const token = getToken();
+        if (!token) return;
+
+        // Cargar perfil del trabajador (ya viene en useMe)
+        if (currentUser.worker_profile) {
+          setYearsExperience(currentUser.worker_profile.years_experience?.toString() || "");
+          setCertificationUrl(currentUser.worker_profile.certification_url || "");
+        }
+
+        // Cargar servicios existentes
+        const existingServices = await serviceController.getWorkerServices(currentUser.id, token);
+        if (existingServices && existingServices.length > 0) {
+          const serviceForms: ServiceForm[] = existingServices.map(s => ({
+            category_id: s.category_id || "",
+            title: s.title || "",
+            description: s.description || "",
+            base_price: s.base_price?.toString() || "",
+          }));
+          setServices(serviceForms);
+        }
+      } catch (err) {
+        // No es crítico, continuar con formulario vacío
+      } finally {
+        setLoadingExistingData(false);
+      }
+    };
+
+    if (!loadingUser && currentUser) {
+      void loadExistingData();
+    }
+  }, [currentUser, loadingUser, getToken, serviceController]);
 
   useEffect(() => {
-    // Intentar obtener userId y token de diferentes fuentes
-    const finalUserId = userId || location.state?.userId || AuthStorageService.getUserId() || "";
-    const finalToken = token || location.state?.token || AuthStorageService.getToken() || "";
+    const userId = getUserId();
+    const token = getToken();
 
-    if (!finalUserId || !finalToken) {
-      console.error("Missing userId or token:", { finalUserId, finalToken });
+    if (!userId || !token) {
       navigate(ROUTES.PUBLIC.REGISTER, { replace: true });
       return;
     }
 
-    // Cargar categorías
-    const categoryController = new ServiceCategoryController();
-    const loadCategories = async () => {
-      try {
-        const cats = await categoryController.getAllCategories();
-        setCategories(cats);
-      } catch (err) {
-        console.error("Error loading categories:", err);
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError("Error al cargar categorías. Por favor verifica que el backend esté ejecutándose.");
-        }
-      } finally {
-        setLoadingCategories(false);
-      }
-    };
-
-    loadCategories();
-  }, [userId, token, location.state, navigate]);
+    if (categoriesError) {
+      setError(categoriesError);
+    }
+  }, [getUserId, getToken, navigate, categoriesError]);
 
   const addService = () => {
     if (services.length >= 3) {
@@ -139,8 +162,8 @@ export function CompleteWorkerProfileForm() {
 
     try {
       // Asegurar que tenemos userId y token
-      const finalUserId = userId || location.state?.userId || AuthStorageService.getUserId() || "";
-      const finalToken = token || location.state?.token || AuthStorageService.getToken() || "";
+      const finalUserId = getUserId();
+      const finalToken = getToken();
 
       if (!finalUserId || !finalToken) {
         setError("Error de autenticación. Por favor inicia sesión nuevamente.");
@@ -162,8 +185,11 @@ export function CompleteWorkerProfileForm() {
         services: servicesDto,
       }, finalToken);
 
-      // Redirigir a home o dashboard
-      navigate(ROUTES.PUBLIC.HOME, { replace: true });
+      // Actualizar datos del usuario para reflejar cambios
+      await refetchUser();
+
+      // Redirigir a dashboard de servicios
+      navigate(ROUTES.DASHBOARD.SERVICES, { replace: true });
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -176,8 +202,8 @@ export function CompleteWorkerProfileForm() {
   };
 
   // Verificar si tenemos userId y token antes de renderizar
-  const finalUserId = userId || location.state?.userId || localStorage.getItem("userId") || "";
-  const finalToken = token || location.state?.token || localStorage.getItem("token") || "";
+  const finalUserId = getUserId();
+  const finalToken = getToken();
 
   if (!finalUserId || !finalToken) {
     return (
@@ -191,26 +217,40 @@ export function CompleteWorkerProfileForm() {
     );
   }
 
+  if (loadingUser || loadingExistingData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="p-8">
+          <LoadingState message="Cargando datos del perfil..." variant="list" count={3} />
+        </Card>
+      </div>
+    );
+  }
+
+  const isEditing = currentUser?.worker_profile !== undefined;
+
   return (
-    <div className="min-h-screen flex bg-white">
+    <div className="min-h-screen flex bg-background">
       <div className="flex-1 flex flex-col justify-between px-8 py-6 max-w-4xl mx-auto">
         <div>
           <div className="mb-8 mt-8">
-            <div className="mb-2 text-3xl font-bold text-gray-800 leading-tight">
-              Completa tu Perfil de Trabajador
+            <div className="mb-2 text-3xl font-semibold text-foreground leading-tight">
+              {isEditing ? "Editar Perfil de Trabajador" : "Completa tu Perfil de Trabajador"}
             </div>
-            <div className="mt-4 mb-2 text-base text-gray-700">
-              Agrega tu experiencia y los servicios que ofreces (máximo 3)
+            <div className="mt-4 mb-2 text-base text-text-secondary leading-relaxed">
+              {isEditing 
+                ? "Actualiza tu experiencia y los servicios que ofreces (máximo 3)"
+                : "Agrega tu experiencia y los servicios que ofreces (máximo 3)"}
             </div>
           </div>
 
-          <Card className="p-8 shadow-lg border-2 border-blue-500 bg-white">
+          <Card className="p-8 shadow-md border-2 border-primary">
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && <Alert variant="destructive">{error}</Alert>}
 
               <div>
-                <Label htmlFor="yearsExperience" className="font-medium text-gray-700">
-                  Años de Experiencia <span className="text-red-500">*</span>
+                <Label htmlFor="yearsExperience" className="font-medium text-foreground">
+                  Años de Experiencia <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="yearsExperience"
@@ -219,13 +259,13 @@ export function CompleteWorkerProfileForm() {
                   value={yearsExperience}
                   onChange={e => setYearsExperience(e.target.value)}
                   placeholder="5"
-                  className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1"
                   required
                 />
               </div>
 
               <div>
-                <Label htmlFor="certificationUrl" className="font-medium text-gray-700">
+                <Label htmlFor="certificationUrl" className="font-medium text-foreground">
                   URL de Certificación (Opcional)
                 </Label>
                 <Input
@@ -234,31 +274,31 @@ export function CompleteWorkerProfileForm() {
                   value={certificationUrl}
                   onChange={e => setCertificationUrl(e.target.value)}
                   placeholder="https://ejemplo.com/certificado.pdf"
-                  className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1"
                 />
               </div>
 
-              <div className="border-t pt-6">
+              <div className="border-t border-border pt-6">
                 <div className="flex items-center justify-between mb-4">
-                  <Label className="font-medium text-gray-700 text-lg">
-                    Servicios que Ofreces <span className="text-red-500">*</span>
+                  <Label className="font-medium text-foreground text-lg">
+                    Servicios que Ofreces <span className="text-destructive">*</span>
                   </Label>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-text-secondary">
                     {services.length}/3 servicios
                   </div>
                 </div>
 
                 {services.map((service, index) => (
-                  <Card key={index} className="p-4 mb-4 border border-gray-200">
+                  <Card key={index} className="p-4 mb-4 border border-border">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-medium text-gray-700">Servicio {index + 1}</h3>
+                      <h3 className="font-medium text-foreground">Servicio {index + 1}</h3>
                       {services.length > 1 && (
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={() => removeService(index)}
-                          className="text-red-600 hover:text-red-700"
+                          className="text-destructive hover:text-destructive hover:bg-destructive-light"
                         >
                           Eliminar
                         </Button>
@@ -267,18 +307,18 @@ export function CompleteWorkerProfileForm() {
 
                     <div className="space-y-4">
                       <div>
-                        <Label className="font-medium text-gray-700">
-                          Categoría <span className="text-red-500">*</span>
+                        <Label className="font-medium text-foreground">
+                          Categoría <span className="text-destructive">*</span>
                         </Label>
                         <Select
                           value={service.category_id}
                           onValueChange={(value) => updateService(index, "category_id", value)}
                           disabled={loadingCategories}
                         >
-                          <SelectTrigger className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white">
+                          <SelectTrigger className="mt-1">
                             <SelectValue placeholder={loadingCategories ? "Cargando..." : "Selecciona una categoría"} />
                           </SelectTrigger>
-                          <SelectContent className="z-[9999] bg-white border-gray-200 shadow-xl max-h-[200px]">
+                          <SelectContent position="popper" className="max-h-[200px]">
                             {categories.map((cat) => (
                               <SelectItem key={cat.id} value={cat.id}>
                                 {cat.name}
@@ -289,35 +329,35 @@ export function CompleteWorkerProfileForm() {
                       </div>
 
                       <div>
-                        <Label className="font-medium text-gray-700">
-                          Título del Servicio <span className="text-red-500">*</span>
+                        <Label className="font-medium text-foreground">
+                          Título del Servicio <span className="text-destructive">*</span>
                         </Label>
                         <Input
                           value={service.title}
                           onChange={e => updateService(index, "title", e.target.value)}
                           placeholder="Ej: Muebles a medida"
-                          className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          className="mt-1"
                           required
                         />
                       </div>
 
                       <div>
-                        <Label className="font-medium text-gray-700">
-                          Descripción <span className="text-red-500">*</span>
+                        <Label className="font-medium text-foreground">
+                          Descripción <span className="text-destructive">*</span>
                         </Label>
                         <Textarea
                           value={service.description}
                           onChange={e => updateService(index, "description", e.target.value)}
                           placeholder="Describe tu servicio..."
-                          className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          className="mt-1"
                           rows={3}
                           required
                         />
                       </div>
 
                       <div>
-                        <Label className="font-medium text-gray-700">
-                          Precio Base <span className="text-red-500">*</span>
+                        <Label className="font-medium text-foreground">
+                          Precio Base <span className="text-destructive">*</span>
                         </Label>
                         <Input
                           type="number"
@@ -326,7 +366,7 @@ export function CompleteWorkerProfileForm() {
                           value={service.base_price}
                           onChange={e => updateService(index, "base_price", e.target.value)}
                           placeholder="80.00"
-                          className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          className="mt-1"
                           required
                         />
                       </div>
@@ -339,7 +379,7 @@ export function CompleteWorkerProfileForm() {
                     type="button"
                     variant="outline"
                     onClick={addService}
-                    className="w-full border-blue-500 text-blue-600 hover:bg-blue-50"
+                    className="w-full"
                   >
                     + Agregar Otro Servicio
                   </Button>
@@ -357,10 +397,10 @@ export function CompleteWorkerProfileForm() {
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2"
+                  className="flex-1 font-medium py-2"
                   disabled={loading || loadingCategories}
                 >
-                  {loading ? "Guardando..." : "Completar Perfil"}
+                  {loading ? "Guardando..." : isEditing ? "Guardar Cambios" : "Completar Perfil"}
                 </Button>
               </div>
             </form>

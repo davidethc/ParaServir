@@ -7,12 +7,12 @@ import { DashboardSidebar } from "../../presentation/components/DashboardSidebar
  */
 export function DashboardLayout() {
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-background">
       {/* Sidebar persistente */}
       <DashboardSidebar />
       
       {/* Contenido principal que cambia según la ruta */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto bg-secondary" style={{ isolation: 'isolate' }}>
         <Outlet />
       </main>
     </div>

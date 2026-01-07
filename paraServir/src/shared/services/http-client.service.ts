@@ -58,9 +58,26 @@ export class HttpClientService {
     try {
       const errorData = await response.json();
       errorMessage = errorData.message || errorData.error || errorMessage;
+      
+      // Mensajes más específicos según el código de estado
+      if (response.status === 401) {
+        errorMessage = errorData.message || 'Token inválido o sesión expirada. Por favor, inicia sesión nuevamente.';
+      } else if (response.status === 403) {
+        errorMessage = errorData.message || 'No tienes permisos para realizar esta acción.';
+      } else if (response.status === 404) {
+        errorMessage = errorData.message || 'Recurso no encontrado.';
+      } else if (response.status === 400) {
+        errorMessage = errorData.message || 'Datos inválidos. Verifica la información ingresada.';
+      }
     } catch {
       // Si no se puede parsear JSON, usar el mensaje por defecto
-      errorMessage = `Error ${response.status}: ${response.statusText}`;
+      if (response.status === 401) {
+        errorMessage = 'Token inválido o sesión expirada. Por favor, inicia sesión nuevamente.';
+      } else if (response.status === 403) {
+        errorMessage = 'No tienes permisos para realizar esta acción.';
+      } else {
+        errorMessage = `Error ${response.status}: ${response.statusText}`;
+      }
     }
 
     throw new Error(errorMessage);

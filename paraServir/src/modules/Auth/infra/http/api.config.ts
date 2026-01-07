@@ -14,6 +14,7 @@ export const API_CONFIG = {
         auth: {
             login: '/auth/login',
             register: '/auth/register',
+            verifyEmail: '/auth/verify-email',
         },
     },
 };

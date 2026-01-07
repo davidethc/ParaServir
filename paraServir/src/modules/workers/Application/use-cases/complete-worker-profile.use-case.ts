@@ -1,7 +1,7 @@
 import type { CompleteWorkerProfileDto, CompleteWorkerProfileResponseDto } from "../dto/complete-worker-profile.dto";
 import { API_CONFIG } from "../../infra/http/api.config";
 import { simulateNetworkDelay } from "@/shared/Utils/mockData";
-const USE_MOCK_DATA = true; // Cambiar a false cuando el backend esté listo
+const USE_MOCK_DATA = false; // Cambiar a true solo para desarrollo/testing
 
 export class CompleteWorkerProfileUseCase {
     private apiUrl: string;
@@ -38,40 +38,54 @@ export class CompleteWorkerProfileUseCase {
         }
 
         try {
-            const response = await fetch(`${this.apiUrl}${API_CONFIG.endpoints.workers.completeProfile}`, {
+            // Primero actualizar el perfil profesional
+            const profileResponse = await fetch(`${this.apiUrl}${API_CONFIG.endpoints.workers.completeProfile}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify({
-                    userId: dto.userId,
                     years_experience: dto.years_experience,
                     certification_url: dto.certification_url || null,
-                    services: dto.services,
                 }),
             });
 
-            if (response.status === 400) {
-                const error = await response.json().catch(() => ({ message: 'Datos inválidos' }));
-                throw new Error(error.message || 'Datos inválidos');
+            if (!profileResponse.ok) {
+                const error = await profileResponse.json().catch(() => ({ message: 'Error al actualizar perfil profesional' }));
+                throw new Error(error.message || 'Error al actualizar perfil profesional');
             }
 
-            if (response.status === 401) {
-                throw new Error("No autorizado. Por favor inicia sesión nuevamente");
-            }
+            const profileData = await profileResponse.json();
+            const workerProfileId = profileData.profile?.id || profileData.profile_id || dto.userId;
 
-            if (!response.ok) {
-                const error = await response.json().catch(() => ({ message: 'Error al completar perfil' }));
-                throw new Error(error.message || 'Error al completar perfil de trabajador');
-            }
+            // Luego crear los servicios (si hay servicios)
+            let servicesCreated = 0;
+            if (dto.services && dto.services.length > 0) {
+                const servicesResponse = await fetch(`${this.apiUrl}/workers/services`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                        services: dto.services,
+                    }),
+                });
 
-            const data = await response.json();
+                if (!servicesResponse.ok) {
+                    const error = await servicesResponse.json().catch(() => ({ message: 'Error al crear servicios' }));
+                    throw new Error(error.message || 'Error al crear servicios');
+                }
+
+                const servicesData = await servicesResponse.json();
+                servicesCreated = servicesData.services?.length || dto.services.length;
+            }
             
             return {
-                workerProfileId: data.workerProfileId || data.id,
-                servicesCreated: data.servicesCreated || dto.services.length,
-                message: data.message || 'Perfil de trabajador completado exitosamente',
+                workerProfileId: workerProfileId,
+                servicesCreated: servicesCreated,
+                message: 'Perfil de trabajador completado exitosamente',
             };
         } catch (error) {
             // Manejar errores de conexión - usar mock como fallback

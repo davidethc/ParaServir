@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useDispatch } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
 import { ROUTES, getPostLoginRoute } from "@/shared/constants/routes.constants";
 import { Input } from "@/shared/components/ui/input";
@@ -7,9 +6,9 @@ import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { Label } from "@/shared/components/ui/label";
 import { Alert } from "@/shared/components/ui/alert";
-import { login } from "@/Store/slices/authSlice";
+import { useAuth } from "@/shared/hooks/useAuth";
 import { AuthController } from "@/modules/Auth/infra/http/controllers/auth.controller";
-import { AuthStorageService } from "@/shared/services/auth-storage.service";
+import { AuthFooter } from "@/shared/components/layout/AuthFooter";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -17,7 +16,7 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const dispatch = useDispatch();
+  const { login: handleLogin } = useAuth();
   const navigate = useNavigate();
   const authController = new AuthController();
 
@@ -35,26 +34,19 @@ export function LoginForm() {
     try {
       const response = await authController.login({ email, password });
 
-      // Guardar token y datos del usuario usando servicio centralizado
+      // Login usando hook unificado (actualiza Redux y localStorage automáticamente)
       if (response.token) {
-        AuthStorageService.saveAuthData({
+        handleLogin({
+          id: response.user.id,
+          email: response.user.email,
+          role: response.user.role,
           token: response.token,
-          userId: response.user.id,
-          userEmail: response.user.email,
-          userRole: response.user.role,
         });
       }
 
-      // Actualizar Redux
-      dispatch(login({
-        id: response.user.id,
-        email: response.user.email,
-        role: response.user.role,
-      }));
-
       // Redirigir según el rol del usuario
       const redirectRoute = getPostLoginRoute(response.user.role);
-      console.log("Login exitoso. Rol:", response.user.role, "Redirigiendo a:", redirectRoute);
+      // Login exitoso, redirigir según rol
       
       // Usar setTimeout para asegurar que Redux se actualice antes de navegar
       setTimeout(() => {
@@ -72,20 +64,20 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex bg-white">
+    <div className="min-h-screen flex bg-background">
       {/* Izquierda: Formulario */}
 
       <div className="flex-1 flex flex-col justify-between px-8 py-6 max-w-xl mx-auto mt-8" >
         <div>
           <div className="mb-8 mt-8">
-            <div className="mb-2 text-2xl font-bold text-gray-800">Inicia sesión en tu cuenta</div>
-            <p className="text-sm text-gray-600">Ingresa tus credenciales para acceder a tu cuenta</p>
+            <div className="mb-2 text-2xl font-semibold text-foreground">Inicia sesión en tu cuenta</div>
+            <p className="text-sm text-muted-foreground leading-relaxed">Ingresa tus credenciales para acceder a tu cuenta</p>
           </div>
-          <Card className="p-8 shadow-lg border-2 border-blue-500 bg-white">
+          <Card className="p-8">
             <form onSubmit={handleSubmit} className="space-y-5">
               {error && <Alert variant="destructive">{error}</Alert>}
               <div>
-                <Label htmlFor="email" className="font-medium text-gray-700">Correo electrónico <span className="text-red-500">*</span></Label>
+                <Label htmlFor="email" className="font-medium text-foreground">Correo electrónico <span className="text-destructive">*</span></Label>
                 <Input
                   id="email"
                   name="email"
@@ -93,12 +85,12 @@ export function LoginForm() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="Ingresa tu correo electrónico registrado"
-                  className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1"
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="password" className="font-medium text-gray-700">Contraseña <span className="text-red-500">*</span></Label>
+                <Label htmlFor="password" className="font-medium text-foreground">Contraseña <span className="text-destructive">*</span></Label>
                 <div className="relative mt-1">
                   <Input
                     id="password"
@@ -107,12 +99,12 @@ export function LoginForm() {
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="Ingresa tu contraseña"
-                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    className=""
                     required
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary"
                     tabIndex={-1}
                     onClick={() => setShowPassword((v) => !v)}
                   >
@@ -124,44 +116,40 @@ export function LoginForm() {
                   </button>
                 </div>
                 <div className="flex items-center justify-between mt-2 text-sm">
-                  <label className="flex items-center gap-2 text-gray-700">
-                    <input type="checkbox" className="accent-blue-500" />
+                  <label className="flex items-center gap-2 text-text-secondary">
+                    <input type="checkbox" className="accent-primary" />
                     Recuérdame
                   </label>
-                  <Link to={ROUTES.PUBLIC.FORGOT_PASSWORD} className="text-blue-600 hover:text-blue-700 hover:underline font-medium">¿Olvidaste tu contraseña?</Link>
+                  <Link to={ROUTES.PUBLIC.FORGOT_PASSWORD} className="text-primary hover:text-primary-hover hover:underline font-medium">¿Olvidaste tu contraseña?</Link>
                 </div>
               </div>
               <Button 
                 type="submit" 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2"
+                className="w-full font-medium py-2"
                 disabled={loading}
               >
                 {loading ? "Iniciando sesión..." : "Iniciar sesión"}
               </Button>
               <div className="flex items-center gap-2 my-2">
-                <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-gray-400 text-xs">O ingresa con</span>
-                <div className="flex-1 h-px bg-gray-200" />
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-muted-foreground text-xs">O ingresa con</span>
+                <div className="flex-1 h-px bg-border" />
               </div>
-              <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2 border-gray-300 hover:border-blue-500 hover:bg-blue-50 text-gray-700">
+              <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2">
                 <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="h-5 w-5" />
                 Google
               </Button>
-              <div className="text-center text-sm mt-2 text-gray-600">
+              <div className="text-center text-sm mt-2 text-text-secondary">
                 ¿No tienes cuenta?{' '}
-                <Link to={ROUTES.PUBLIC.REGISTER} className="text-blue-600 hover:text-blue-700 hover:underline font-medium">Regístrate</Link>
+                <Link to={ROUTES.PUBLIC.REGISTER} className="text-primary hover:text-primary-hover hover:underline font-medium">Regístrate</Link>
               </div>
             </form>
           </Card>
         </div>
-        <footer className="text-xs text-gray-400 text-center mt-8 mb-2">
-          © 2025 Todos los derechos reservados. <span className="mx-1">·</span>
-          <Link to="#" className="hover:underline">Términos y Condiciones</Link> <span className="mx-1">·</span>
-          <Link to="#" className="hover:underline">Política de Privacidad</Link>
-        </footer>
+        <AuthFooter />
       </div>
       {/* Derecha: Logo */}
-      <div className="hidden md:flex flex-1 items-center justify-center bg-white">
+      <div className="hidden md:flex flex-1 items-center justify-center bg-secondary">
           <img 
            src="/src/shared/Assets/logo_servir.png" 
            alt="Logo ParaServir" 

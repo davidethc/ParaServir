@@ -9,6 +9,7 @@ export const API_CONFIG = {
         services: {
             base: '/services',
             createBasic: '/workers/services',
+            listByWorker: (workerId: string) => `/workers/${workerId}/services`,
         },
     },
 };

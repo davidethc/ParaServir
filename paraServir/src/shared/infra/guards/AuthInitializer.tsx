@@ -1,38 +1,24 @@
 import { useEffect } from "react";
-import { useDispatch } from "react-redux";
-import { login } from "@/Store/slices/authSlice";
-import { AuthStorageService } from "@/shared/services/auth-storage.service";
+import { useAuth } from "@/shared/hooks/useAuth";
 
 /**
  * Componente que inicializa el estado de autenticación desde localStorage
  * Se ejecuta al cargar la aplicación para restaurar la sesión
  * 
- * BUENAS PRÁCTICAS:
- * - Usa AuthStorageService para acceso consistente a localStorage
- * - Restaura estado de Redux desde localStorage
- * - Limpia datos inválidos automáticamente
+ * MEJORADO:
+ * - Usa el hook useAuth unificado
+ * - Elimina lógica duplicada
+ * - Más simple y mantenible
  */
 export function AuthInitializer({ children }: { children: React.ReactNode }) {
-  const dispatch = useDispatch();
+  const { restoreFromStorage } = useAuth();
 
   useEffect(() => {
-    // Obtener datos de autenticación usando servicio centralizado
-    const authData = AuthStorageService.getAuthData();
-
-    // Si hay datos válidos, restaurar estado de autenticación en Redux
-    if (authData) {
-      dispatch(
-        login({
-          id: authData.userId,
-          email: authData.userEmail,
-          role: authData.userRole,
-        })
-      );
-    } else {
-      // Si no hay datos completos, limpiar cualquier dato residual
-      AuthStorageService.clearAuthData();
-    }
-  }, [dispatch]);
+    // Restaurar autenticación desde localStorage usando hook unificado
+    // Solo se ejecuta una vez al montar el componente
+    restoreFromStorage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Array vacío: solo ejecutar al montar
 
   return <>{children}</>;
 }

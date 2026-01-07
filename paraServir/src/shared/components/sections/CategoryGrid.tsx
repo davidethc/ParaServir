@@ -10,7 +10,7 @@ interface CategoryGridProps {
 
 function CategoryCardSkeleton() {
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+    <div className="border border-border rounded-lg overflow-hidden bg-card">
       <Skeleton className="h-32 w-full" />
       <div className="p-4 space-y-2">
         <Skeleton className="h-5 w-3/4" />
@@ -34,7 +34,7 @@ export function CategoryGrid({ categories, loading = false, onCategoryClick }: C
   if (categories.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">No hay categorías disponibles en este momento.</p>
+        <p className="text-muted-foreground">No hay categorías disponibles en este momento.</p>
       </div>
     );
   }

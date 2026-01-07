@@ -11,6 +11,10 @@ interface LoadingStateProps {
    */
   variant?: "card" | "list" | "grid";
   className?: string;
+  /**
+   * Mensaje de carga opcional
+   */
+  message?: string;
 }
 
 /**
@@ -20,20 +24,28 @@ interface LoadingStateProps {
 export function LoadingState({ 
   count = 6, 
   variant = "card",
-  className 
+  className,
+  message
 }: LoadingStateProps) {
   if (variant === "card") {
     return (
-      <div className={cn("grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6", className)}>
-        {Array.from({ length: count }).map((_, i) => (
-          <div key={i} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-            <Skeleton className="h-32 w-full" />
-            <div className="p-4 space-y-2">
-              <Skeleton className="h-5 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-            </div>
+      <div className={cn("space-y-4", className)}>
+        {message && (
+          <div className="text-center text-muted-foreground mb-4">
+            {message}
           </div>
-        ))}
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: count }).map((_, i) => (
+            <div key={i} className="border border-border rounded-lg overflow-hidden bg-card">
+              <Skeleton className="h-32 w-full" />
+              <div className="p-4 space-y-2">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
