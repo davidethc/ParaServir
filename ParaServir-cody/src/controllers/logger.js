@@ -32,6 +32,14 @@ export const login = async (req, res) => {
 
         const user = result.rows[0];
 
+        // Verificar si el usuario tiene contraseña
+        if (!user.password_hash) {
+            return res.status(400).json({
+                status: "error",
+                message: "Tu cuenta no tiene contraseña configurada. Por favor, restablece tu contraseña."
+            });
+        }
+
         // Comparar contraseñas
         const isValid = await bcrypt.compare(password, user.password_hash);
         if (!isValid) {
