@@ -39,11 +39,24 @@ export class GetServiceRequestDetailUseCase {
     const endpoint = `${API_CONFIG.endpoints.requests.base}/${requestId}`;
     
     try {
-      const response = await httpClient.get<ServiceRequestDto>(endpoint, {
+      const response = await httpClient.get<{ 
+        status: string; 
+        request: ServiceRequestDto;
+      }>(endpoint, {
         Authorization: `Bearer ${token}`,
       });
       
-      return response;
+      // El backend devuelve { status: "success", request: {...} }
+      if (response.status === "success" && response.request) {
+        return response.request;
+      }
+      
+      // Fallback: si la respuesta es directamente el request (compatibilidad)
+      if (response && 'id' in response && 'status' in response) {
+        return response as ServiceRequestDto;
+      }
+      
+      throw new Error("Formato de respuesta inválido del servidor");
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`Error al obtener solicitud: ${error.message}`);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { ROUTES } from "@/shared/constants/routes.constants";
 import { Input } from "@/shared/components/ui/input";
 import { Select } from "@/shared/components/ui/select";
@@ -62,11 +62,12 @@ export function CreateBasicServiceForm({
       return;
     }
 
-    // Autorrellenar categoría si viene initialService
+    // Autorrellenar categoría si viene initialService (solo una vez)
     if (!categoryId && initialService?.category_id) {
       setCategoryId(initialService.category_id);
     }
-  }, [getUserId, getToken, navigate, categoryId, initialService]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Si venimos en modo edición y tenemos initialService, setear campos
   useEffect(() => {
@@ -97,6 +98,7 @@ export function CreateBasicServiceForm({
       return;
     }
 
+    // Validar precio: si es por hora, debe tener rango; si es por obra, no requiere rango
     if (priceType === "hourly" && !priceRange) {
       setError("Debes seleccionar un rango de precio por hora o seleccionar precio por obra");
       return;
@@ -115,12 +117,14 @@ export function CreateBasicServiceForm({
 
       if (!finalUserId || !finalToken) {
         setError("Error de autenticación. Por favor inicia sesión nuevamente.");
-        navigate(ROUTES.PUBLIC.LOGIN);
+        setLoading(false);
+        navigate(ROUTES.PUBLIC.LOGIN, { replace: true });
         return;
       }
 
       if (!isWorker(user?.role)) {
         setError("Solo los trabajadores pueden crear servicios. Por favor, verifica tu rol.");
+        setLoading(false);
         return;
       }
 
@@ -150,7 +154,7 @@ export function CreateBasicServiceForm({
           replace: true,
         });
       } else {
-        const response = await serviceController.createBasicService({
+        await serviceController.createBasicService({
           userId: finalUserId,
           category_id: categoryId,
           title: serviceName,

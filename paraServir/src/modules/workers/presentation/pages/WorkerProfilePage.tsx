@@ -27,6 +27,8 @@ import {
   MessageSquare,
   ArrowLeft
 } from "lucide-react";
+import { WhatsAppButton } from "@/shared/components/ui/whatsapp-button";
+import { getWorkerAvatar } from "@/shared/utils/avatar-utils";
 import { ROUTES } from "@/shared/constants/routes.constants";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useSelector } from "react-redux";
@@ -128,6 +130,14 @@ export function WorkerProfilePage() {
   const fullName = `${worker.first_name} ${worker.last_name}`;
   const initials = `${worker.first_name[0]}${worker.last_name[0]}`.toUpperCase();
 
+  // Generar avatar si no existe
+  const displayAvatar = getWorkerAvatar(
+    worker.id || id || '',
+    worker.avatar_url,
+    worker.first_name,
+    worker.last_name
+  );
+
   return (
     <PageContainer>
       <div className="space-y-6">
@@ -141,7 +151,7 @@ export function WorkerProfilePage() {
           <CardHeader>
             <div className="flex items-start gap-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={worker.avatar_url || undefined} alt={fullName} />
+                <AvatarImage src={displayAvatar} alt={fullName} />
                 <AvatarFallback className="text-lg">{initials}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
@@ -165,9 +175,17 @@ export function WorkerProfilePage() {
                     </div>
                   )}
                   {worker.phone && (
-                    <div className="flex items-center gap-1">
-                      <Phone className="h-4 w-4" />
-                      {worker.phone}
+                    <div className="flex items-center gap-2">
+                      <WhatsAppButton
+                        phone={worker.phone}
+                        message={`Hola ${fullName}, me interesa tus servicios`}
+                        variant="icon"
+                        size="sm"
+                      />
+                      <span className="flex items-center gap-1">
+                        <Phone className="h-4 w-4" />
+                        {worker.phone}
+                      </span>
                     </div>
                   )}
                   {worker.years_experience && (

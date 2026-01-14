@@ -7,6 +7,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { CategoryCard } from "@/shared/components/cards/CategoryCard";
 import { ServiceCard } from "@/shared/components/cards/ServiceCard";
+import { getWorkerAvatar } from "@/shared/utils/avatar-utils";
 
 export function DashboardHomePage() {
   const navigate = useNavigate();
@@ -76,7 +77,11 @@ export function DashboardHomePage() {
               <h2 className="text-2xl font-bold text-foreground">Categorías Populares</h2>
               <p className="text-muted-foreground">Explora los servicios más solicitados</p>
             </div>
-            <Button variant="ghost" className="gap-2 text-primary hover:text-primary-hover">
+            <Button 
+              variant="ghost" 
+              className="gap-2 text-primary hover:text-primary-hover"
+              onClick={() => navigate(ROUTES.DASHBOARD.CATEGORIES)}
+            >
               Ver todas <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
@@ -110,21 +115,25 @@ export function DashboardHomePage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Mock data for preview */}
-            {[1, 2, 3].map((i) => (
-              <ServiceCard
-                key={i}
-                id={`srv-${i}`}
-                title="Diseño de Identidad Visual Corporativa"
-                description="Creo logotipos y guías de estilo para marcas modernas que buscan destacar."
-                basePrice={150 + i * 50}
-                isAvailable={true}
-                rating={4.8}
-                reviewCount={24}
-                workerName="Ana García"
-                workerAvatar={`https://i.pravatar.cc/150?u=${i}`}
-                categoryName="Diseño"
-              />
-            ))}
+            {[1, 2, 3].map((i) => {
+              const workerName = i === 1 ? "Ana García" : i === 2 ? "Carlos Méndez" : "Laura Torres";
+              return (
+                <ServiceCard
+                  key={i}
+                  id={`srv-${i}`}
+                  title="Diseño de Identidad Visual Corporativa"
+                  description="Creo logotipos y guías de estilo para marcas modernas que buscan destacar."
+                  basePrice={150 + i * 50}
+                  isAvailable={true}
+                  rating={4.8}
+                  reviewCount={24}
+                  workerName={workerName}
+                  workerId={`worker-${i}`}
+                  workerAvatar={getWorkerAvatar(`worker-${i}`, undefined, workerName.split(" ")[0], workerName.split(" ")[1])}
+                  categoryName="Diseño"
+                />
+              );
+            })}
           </div>
         </section>
       </PageContainer>

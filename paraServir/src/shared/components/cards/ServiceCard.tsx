@@ -5,6 +5,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avat
 import { Star, Clock, CheckCircle2 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { getCategoryImage } from "@/shared/utils/category-images";
+import { WhatsAppButton } from "@/shared/components/ui/whatsapp-button";
+import { getWorkerAvatar } from "@/shared/utils/avatar-utils";
 
 interface ServiceCardProps {
   id: string;
@@ -14,6 +16,8 @@ interface ServiceCardProps {
   isAvailable: boolean;
   workerName: string;
   workerAvatar?: string;
+  workerPhone?: string;
+  workerId?: string;
   rating?: number;
   reviewCount?: number;
   deliveryTime?: string;
@@ -34,6 +38,8 @@ export function ServiceCard({
   isAvailable,
   workerName,
   workerAvatar,
+  workerPhone,
+  workerId,
   rating,
   reviewCount,
   deliveryTime,
@@ -53,6 +59,14 @@ export function ServiceCard({
     .join("")
     .toUpperCase()
     .slice(0, 2);
+
+  // Generar avatar si no existe, usando el nombre o ID del trabajador
+  const displayAvatar = getWorkerAvatar(
+    workerId || id,
+    workerAvatar,
+    workerName.split(" ")[0],
+    workerName.split(" ").slice(1).join(" ")
+  );
 
   return (
     <Card
@@ -112,15 +126,26 @@ export function ServiceCard({
         {/* Header: Worker info */}
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10 border-2 border-background ring-2 ring-primary/10">
-            <AvatarImage src={workerAvatar} alt={workerName} />
+            <AvatarImage src={displayAvatar} alt={workerName} />
             <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-sm">
               {initials}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">
-              {workerName}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-foreground truncate">
+                {workerName}
+              </p>
+              {workerPhone && (
+                <WhatsAppButton
+                  phone={workerPhone}
+                  message={`Hola ${workerName}, me interesa el servicio: ${title}`}
+                  variant="icon"
+                  size="sm"
+                  className="flex-shrink-0"
+                />
+              )}
+            </div>
             {rating !== undefined && rating > 0 && (
               <div className="flex items-center gap-1 mt-0.5">
                 <Star className="h-3.5 w-3.5 fill-warning text-warning" />

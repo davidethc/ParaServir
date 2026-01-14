@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { MessageDto } from "../../application/dto/message.dto";
 import { cn } from "@/shared/lib/utils";
+import { getUserAvatar } from "@/shared/utils/avatar-utils";
 
 interface MessageBubbleProps {
   message: MessageDto;
@@ -18,6 +19,13 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
   const formattedTime = format(new Date(message.created_at), "HH:mm", { locale: es });
 
+  // Generar avatar si no existe
+  const displayAvatar = getUserAvatar(
+    message.sender_id || '',
+    message.sender_avatar,
+    message.sender_name
+  );
+
   return (
     <div
       className={cn(
@@ -27,7 +35,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     >
       {!message.is_own && (
         <Avatar className="h-8 w-8">
-          <AvatarImage src={message.sender_avatar || undefined} alt={message.sender_name} />
+          <AvatarImage src={displayAvatar} alt={message.sender_name} />
           <AvatarFallback className="text-xs">{initials}</AvatarFallback>
         </Avatar>
       )}

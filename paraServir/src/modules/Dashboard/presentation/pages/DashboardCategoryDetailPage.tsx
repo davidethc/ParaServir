@@ -86,20 +86,26 @@ export function DashboardCategoryDetailPage() {
   const { category, workers = [], services = [] } = categoryDetail;
 
   const goToRequest = (opts: { serviceId?: string; workerId?: string }) => {
-    const params = new URLSearchParams();
-    if (category.id) params.set('categoryId', category.id);
-    if (opts.serviceId) params.set('serviceId', opts.serviceId);
-    if (opts.workerId) params.set('workerId', opts.workerId);
-    
-    const serviceName = services.find((s) => s.id === opts.serviceId)?.title;
-    const workerName =
-      services.find((s) => s.id === opts.serviceId)?.worker_name ||
-      workers.find((w) => w.worker_id === opts.workerId)?.first_name;
-    
-    if (serviceName) params.set('serviceName', serviceName);
-    if (workerName) params.set('workerName', workerName);
+    try {
+      const params = new URLSearchParams();
+      if (category?.id) params.set('categoryId', category.id);
+      if (opts.serviceId) params.set('serviceId', opts.serviceId);
+      if (opts.workerId) params.set('workerId', opts.workerId);
+      
+      const serviceName = services.find((s) => s.id === opts.serviceId)?.title;
+      const workerName =
+        services.find((s) => s.id === opts.serviceId)?.worker_name ||
+        workers.find((w) => w.worker_id === opts.workerId)?.first_name;
+      
+      if (serviceName) params.set('serviceName', serviceName);
+      if (workerName) params.set('workerName', workerName);
 
-    navigate(`${ROUTES.DASHBOARD.REQUESTS_NEW}?${params.toString()}`);
+      navigate(`${ROUTES.DASHBOARD.REQUESTS_NEW}?${params.toString()}`);
+    } catch (error) {
+      console.error("Error al navegar a crear solicitud:", error);
+      // Navegar sin parámetros si hay error
+      navigate(ROUTES.DASHBOARD.REQUESTS_NEW);
+    }
   };
 
   const availableServices = services.filter((s) => s.is_available ?? true);
@@ -157,19 +163,27 @@ export function DashboardCategoryDetailPage() {
         </div>
         {availableServices && availableServices.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {availableServices.map((service) => (
-              <ServiceCard
-                key={service.id || `service-${Math.random()}`}
-                id={service.id || ""}
-                title={service.title || "Servicio sin título"}
-                description={service.description || "Sin descripción"}
-                basePrice={service.base_price}
-                isAvailable={true}
-                workerName={service.worker_name || "Trabajador desconocido"}
-                categoryName={category.name}
-                onClick={() => goToRequest({ serviceId: service.id, workerId: service.worker_id })}
-              />
-            ))}
+            {availableServices.map((service) => {
+              // Buscar el teléfono del trabajador en el array de workers
+              const worker = workers.find((w) => w.worker_id === service.worker_id);
+              const workerPhone = worker?.phone;
+              
+              return (
+                <ServiceCard
+                  key={service.id || `service-${Math.random()}`}
+                  id={service.id || ""}
+                  title={service.title || "Servicio sin título"}
+                  description={service.description || "Sin descripción"}
+                  basePrice={service.base_price}
+                  isAvailable={true}
+                  workerName={service.worker_name || "Trabajador desconocido"}
+                  workerPhone={workerPhone}
+                  workerId={service.worker_id}
+                  categoryName={category.name}
+                  onClick={() => goToRequest({ serviceId: service.id, workerId: service.worker_id })}
+                />
+              );
+            })}
           </div>
         ) : (
           <EmptyState

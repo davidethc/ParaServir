@@ -11,6 +11,7 @@ import type { ConversationDto } from "../../application/dto/conversation.dto";
 import type { MessageDto } from "../../application/dto/message.dto";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { AlertCircle, MessageSquare } from "lucide-react";
+import { getUserAvatar } from "@/shared/utils/avatar-utils";
 
 interface ChatWindowProps {
   conversation: ConversationDto | null;
@@ -119,12 +120,19 @@ export function ChatWindow({ conversation, onMessageSent }: ChatWindowProps) {
   const initials = getInitials();
   const fullName = `${firstName} ${lastName}`.trim() || "Usuario";
 
+  // Generar avatar si no existe
+  const displayAvatar = getUserAvatar(
+    otherUser?.id || conversation.id,
+    otherUser?.avatar,
+    fullName
+  );
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="border-b border-border">
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={otherUser.avatar || undefined} alt={fullName} />
+            <AvatarImage src={displayAvatar} alt={fullName} />
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
           <div className="flex-1">

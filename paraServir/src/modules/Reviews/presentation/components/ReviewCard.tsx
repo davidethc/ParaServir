@@ -4,6 +4,7 @@ import { ReviewRating } from "./ReviewRating";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { ReviewDto } from "../../application/dto/review.dto";
+import { getUserAvatar } from "@/shared/utils/avatar-utils";
 
 interface ReviewCardProps {
   review: ReviewDto;
@@ -28,12 +29,19 @@ export function ReviewCard({ review }: ReviewCardProps) {
 
   const formattedDate = format(new Date(review.created_at), "dd 'de' MMMM, yyyy", { locale: es });
 
+  // Generar avatar si no existe
+  const displayAvatar = getUserAvatar(
+    review.client_id || '',
+    review.client_avatar,
+    clientName
+  );
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-start gap-3">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={review.client_avatar || undefined} alt={clientName} />
+            <AvatarImage src={displayAvatar} alt={clientName} />
             <AvatarFallback className="text-sm">{initials}</AvatarFallback>
           </Avatar>
           <div className="flex-1">

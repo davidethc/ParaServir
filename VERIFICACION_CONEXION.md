@@ -151,3 +151,8 @@ Si encuentras algún problema, revisa:
 - La consola del navegador (errores de red)
 - Los logs del backend (errores de servidor)
 - El token en localStorage (que esté presente y válido)
+
+
+
+
+

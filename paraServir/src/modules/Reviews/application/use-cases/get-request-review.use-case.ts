@@ -25,10 +25,16 @@ export class GetRequestReviewUseCase {
     const endpoint = API_CONFIG.endpoints.reviews.request(requestId);
     
     try {
+      // Usar silent404=true para no lanzar error cuando no hay reseña (404 es normal)
       const response = await httpClient.get<{ 
         status: string; 
         review: ReviewDto;
-      }>(endpoint);
+      } | null>(endpoint, undefined, true);
+      
+      // Si response es null (404 silenciado), retornar null
+      if (!response) {
+        return null;
+      }
       
       if (response.status === "success" && response.review) {
         return response.review;
@@ -36,12 +42,20 @@ export class GetRequestReviewUseCase {
       
       return null;
     } catch (error) {
-      // Si no se encuentra reseña, retornar null (no es un error crítico)
-      if (error instanceof Error && error.message.includes("404")) {
-        return null;
-      }
-      
+      // Solo lanzar error si no es un 404 (que ya fue manejado con silent404)
       if (error instanceof Error) {
+        const errorMsg = error.message.toLowerCase();
+        // Si es 404, retornar null (aunque debería haber sido manejado por silent404)
+        if (
+          errorMsg.includes("404") || 
+          errorMsg.includes("no encontrado") || 
+          errorMsg.includes("not found") ||
+          errorMsg.includes("no se encontró reseña") ||
+          errorMsg.includes("recurso no encontrado")
+        ) {
+          return null;
+        }
+        // Para otros errores, lanzar el error
         throw new Error(`Error al obtener reseña: ${error.message}`);
       }
       throw new Error("Error desconocido al obtener reseña");

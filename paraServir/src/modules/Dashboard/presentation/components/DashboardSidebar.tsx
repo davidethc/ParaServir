@@ -25,6 +25,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { cn } from "@/shared/lib/utils";
 import { logout } from "@/Store/slices/authSlice";
 import type { RootState } from "@/Store";
+import { getUserAvatar } from "@/shared/utils/avatar-utils";
 
 interface NavItem {
   label: string;
@@ -100,13 +101,18 @@ export function DashboardSidebar() {
     return emailName.charAt(0).toUpperCase() + emailName.slice(1);
   };
 
+  // Generar avatar para el usuario
+  const userAvatar = user?.id 
+    ? getUserAvatar(user.id, undefined, getUserDisplayName())
+    : undefined;
+
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col h-screen sticky top-0">
       {/* Header con perfil */}
       <div className="p-4 border-b border-border">
         <div className="flex items-center gap-3 mb-4">
           <Avatar className="h-10 w-10">
-            <AvatarImage src="" alt={user?.email || "Usuario"} />
+            <AvatarImage src={userAvatar} alt={user?.email || "Usuario"} />
             <AvatarFallback className="bg-primary/10 text-primary font-semibold">
               {getUserInitials()}
             </AvatarFallback>

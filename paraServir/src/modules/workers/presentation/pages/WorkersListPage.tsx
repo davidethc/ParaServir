@@ -23,6 +23,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { ReviewRating } from "@/modules/Reviews/presentation/components/ReviewRating";
+import { getWorkerAvatar } from "@/shared/utils/avatar-utils";
 
 export function WorkersListPage() {
   const navigate = useNavigate();
@@ -197,7 +198,10 @@ export function WorkersListPage() {
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4 mb-4">
                       <Avatar className="h-16 w-16">
-                        <AvatarImage src={worker.avatar_url || undefined} alt={fullName} />
+                        <AvatarImage 
+                          src={getWorkerAvatar(worker.id, worker.avatar_url, worker.first_name, worker.last_name)} 
+                          alt={fullName} 
+                        />
                         <AvatarFallback className="text-lg">{initials}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">

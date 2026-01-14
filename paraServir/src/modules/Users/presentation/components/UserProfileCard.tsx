@@ -6,6 +6,7 @@ import { Mail, Phone, MapPin, User, Calendar, CheckCircle2, XCircle } from "luci
 import type { UserDto } from "../../application/dto/user.dto";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { getUserAvatar } from "@/shared/utils/avatar-utils";
 
 interface UserProfileCardProps {
   user: UserDto;
@@ -34,12 +35,15 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
   const initials = getInitials();
   const formattedDate = format(new Date(user.created_at), "dd 'de' MMMM, yyyy", { locale: es });
 
+  // Generar avatar si no existe
+  const displayAvatar = getUserAvatar(user.id, user.avatar_url, fullName);
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center gap-4">
           <Avatar className="h-20 w-20">
-            <AvatarImage src={user.avatar_url || undefined} alt={fullName} />
+            <AvatarImage src={displayAvatar} alt={fullName} />
             <AvatarFallback className="text-lg">{initials}</AvatarFallback>
           </Avatar>
           <div className="flex-1">

@@ -4,6 +4,8 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { MapPin, CheckCircle2, Star, Briefcase, TrendingUp } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
+import { WhatsAppButton } from "@/shared/components/ui/whatsapp-button";
+import { getWorkerAvatar } from "@/shared/utils/avatar-utils";
 
 interface WorkerCardProps {
   workerId: string;
@@ -55,6 +57,9 @@ export function WorkerCard({
   const isVerified = verificationStatus === "verified";
   const fullName = `${firstName} ${lastName}`;
 
+  // Generar avatar si no existe
+  const displayAvatar = getWorkerAvatar(workerId, avatarUrl, firstName, lastName);
+
   return (
     <Card
       className={cn(
@@ -83,7 +88,7 @@ export function WorkerCard({
         {/* Avatar destacado */}
         <div className="relative inline-block mb-3">
           <Avatar className="h-20 w-20 border-4 border-background ring-4 ring-primary/10 shadow-lg">
-            <AvatarImage src={avatarUrl} alt={fullName} />
+            <AvatarImage src={displayAvatar} alt={fullName} />
             <AvatarFallback className="bg-primary text-primary-foreground font-bold text-lg">
               {initials}
             </AvatarFallback>
@@ -126,13 +131,26 @@ export function WorkerCard({
           </div>
         </div>
 
-        {/* Ubicación */}
-        {location && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-            <MapPin className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">{location}</span>
-          </div>
-        )}
+        {/* Ubicación y WhatsApp */}
+        <div className="space-y-2 mb-4">
+          {location && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <MapPin className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">{location}</span>
+            </div>
+          )}
+          {phone && (
+            <div className="flex items-center gap-2">
+              <WhatsAppButton
+                phone={phone}
+                message={`Hola ${fullName}, me interesa tus servicios`}
+                variant="icon"
+                size="sm"
+              />
+              <span className="text-sm text-muted-foreground">{phone}</span>
+            </div>
+          )}
+        </div>
 
         {/* Rango de precios destacado */}
         {minPrice !== undefined && maxPrice !== undefined && 

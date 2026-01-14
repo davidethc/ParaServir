@@ -85,8 +85,11 @@ export class HttpClientService {
 
   /**
    * Realiza una petición GET
+   * @param endpoint - Ruta del endpoint
+   * @param headers - Headers adicionales
+   * @param silent404 - Si es true, no lanza error para 404 (útil para recursos opcionales)
    */
-  async get<T>(endpoint: string, headers?: Record<string, string>): Promise<T> {
+  async get<T>(endpoint: string, headers?: Record<string, string>, silent404: boolean = false): Promise<T | null> {
     const url = `${this.baseUrl}${endpoint}`;
     const response = await fetch(url, {
       method: 'GET',
@@ -94,6 +97,10 @@ export class HttpClientService {
     });
 
     if (!response.ok) {
+      // Si es 404 y silent404 está activado, retornar null en lugar de lanzar error
+      if (response.status === 404 && silent404) {
+        return null;
+      }
       await this.handleError(response);
     }
 

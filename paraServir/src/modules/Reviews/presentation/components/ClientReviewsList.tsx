@@ -13,6 +13,7 @@ import { useAuth } from "@/shared/hooks/useAuth";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
+import { getWorkerAvatar } from "@/shared/utils/avatar-utils";
 
 interface ClientReviewsListProps {
   showAverage?: boolean;
@@ -135,13 +136,21 @@ function ClientReviewCard({ review }: ClientReviewCardProps) {
 
   const formattedDate = format(new Date(review.created_at), "dd 'de' MMMM, yyyy", { locale: es });
 
+  // Generar avatar si no existe
+  const displayAvatar = getWorkerAvatar(
+    review.worker_id || '',
+    review.worker_avatar,
+    review.worker_first_name,
+    review.worker_last_name
+  );
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 flex-1">
             <Avatar className="h-10 w-10">
-              <AvatarImage src={review.worker_avatar || undefined} alt={workerName} />
+              <AvatarImage src={displayAvatar} alt={workerName} />
               <AvatarFallback className="text-sm">{initials}</AvatarFallback>
             </Avatar>
             <div className="flex-1">

@@ -31,19 +31,23 @@ import {
   XCircle,
   Clock,
   Loader2,
-  MessageSquare
+  MessageSquare,
+  Star
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { ROUTES } from "@/shared/constants/routes.constants";
 
-const statusConfig = {
-  pending: { label: "Pendiente", variant: "secondary" as const, icon: Clock },
-  accepted: { label: "Aceptada", variant: "default" as const, icon: CheckCircle2 },
-  in_progress: { label: "En Progreso", variant: "default" as const, icon: Loader2 },
-  completed: { label: "Completada", variant: "default" as const, icon: CheckCircle2 },
-  cancelled: { label: "Cancelada", variant: "destructive" as const, icon: XCircle },
+const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive"; icon: React.ComponentType<{ className?: string }> }> = {
+  pending: { label: "Pendiente", variant: "secondary", icon: Clock },
+  accepted: { label: "Aceptada", variant: "default", icon: CheckCircle2 },
+  in_progress: { label: "En Progreso", variant: "default", icon: Loader2 },
+  completed: { label: "Completada", variant: "default", icon: CheckCircle2 },
+  cancelled: { label: "Cancelada", variant: "destructive", icon: XCircle },
 };
+
+// Configuración por defecto para estados desconocidos
+const defaultStatusConfig = { label: "Desconocido", variant: "secondary" as const, icon: AlertCircle };
 
 export function DashboardRequestDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -60,6 +64,7 @@ export function DashboardRequestDetailPage() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [justAccepted, setJustAccepted] = useState(false);
 
   const requestController = useMemo(() => new ServiceRequestController(), []);
   const reviewController = useMemo(() => new ReviewController(), []);
@@ -86,12 +91,12 @@ export function DashboardRequestDetailPage() {
         const requestData = await requestController.getDetail(id, token);
         setRequest(requestData);
 
-        // Cargar reseña si existe
+        // Cargar reseña si existe (no es crítico si falla)
         try {
           const reviewData = await reviewController.getRequestReview(id);
           setReview(reviewData);
-        } catch {
-          // No hay reseña, es normal
+        } catch (err) {
+          // No hay reseña o error 404, es normal - no mostrar error
           setReview(null);
         }
       } catch (err) {
@@ -123,6 +128,13 @@ export function DashboardRequestDetailPage() {
       // Recargar datos para reflejar cambios
       const updatedRequest = await requestController.getDetail(id, token);
       setRequest(updatedRequest);
+
+      // Si un trabajador acepta la solicitud, mostrar mensaje de éxito
+      if (newStatus === "accepted" && isWorker(role)) {
+        setJustAccepted(true);
+        // Ocultar el mensaje después de 5 segundos
+        setTimeout(() => setJustAccepted(false), 5000);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Error al actualizar estado";
       setError(errorMessage);
@@ -192,7 +204,10 @@ export function DashboardRequestDetailPage() {
     );
   }
 
-  const StatusIcon = statusConfig[request.status].icon;
+  // Obtener configuración de estado con fallback
+  const currentStatusConfig = statusConfig[request.status] || defaultStatusConfig;
+  const StatusIcon = currentStatusConfig.icon;
+  
   const formattedDate = request.scheduled_date 
     ? format(new Date(request.scheduled_date), "dd 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })
     : "No programada";
@@ -221,19 +236,44 @@ export function DashboardRequestDetailPage() {
     request.worker_id && 
     ["accepted", "in_progress", "completed"].includes(request.status);
 
+  // Formatear ID de solicitud de forma segura
+  const requestIdDisplay = request.id ? `#${request.id.slice(0, 8)}` : "";
+
   return (
     <PageContainer>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <PageHeader 
             title="Detalle de Solicitud" 
-            description={`Solicitud #${request.id.slice(0, 8)}`}
+            description={requestIdDisplay || "Solicitud de servicio"}
           />
           <Button onClick={() => navigate(ROUTES.DASHBOARD.REQUESTS)} variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
           </Button>
         </div>
+
+        {/* Mensaje de éxito cuando se acepta */}
+        {justAccepted && (
+          <Alert className="bg-primary/10 border-primary">
+            <CheckCircle2 className="h-4 w-4 text-primary" />
+            <AlertDescription className="text-primary">
+              <div className="flex items-center justify-between">
+                <span>¡Solicitud aceptada exitosamente! Ahora puedes chatear con el cliente.</span>
+                {canChat && (
+                  <Button
+                    onClick={() => navigate(`${ROUTES.DASHBOARD.CHATS}?requestId=${request.id}`)}
+                    size="sm"
+                    className="ml-4"
+                  >
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Ir al Chat
+                  </Button>
+                )}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Estado y acciones */}
         <Card>
@@ -243,77 +283,112 @@ export function DashboardRequestDetailPage() {
                 <StatusIcon className="h-5 w-5" />
                 <CardTitle>Estado</CardTitle>
               </div>
-              <Badge variant={statusConfig[request.status].variant}>
-                {statusConfig[request.status].label}
+              <Badge variant={currentStatusConfig.variant}>
+                {currentStatusConfig.label}
               </Badge>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {canChat && (
-                <Button
-                  onClick={() => navigate(`${ROUTES.DASHBOARD.CHATS}?requestId=${request.id}`)}
-                  variant="outline"
-                  size="sm"
-                >
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Ir al Chat
-                </Button>
+            <div className="space-y-3">
+              {/* Información sobre qué puede hacer el usuario según su rol */}
+              {isClient(role) && request.status !== "completed" && (
+                <Alert className="bg-muted border-border">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    <p className="font-medium mb-1">Como cliente, puedes:</p>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      {request.status === "pending" && <li>Cancelar la solicitud si aún no ha sido aceptada</li>}
+                      {canChat && <li>Chatear con el trabajador asignado</li>}
+                      {request.status === "completed" && <li>Dejar una reseña del servicio</li>}
+                    </ul>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      El cambio de estado del servicio lo realiza el trabajador.
+                    </p>
+                  </AlertDescription>
+                </Alert>
               )}
-              {canAccept && (
-                <Button
-                  onClick={() => handleStatusUpdate("accepted")}
-                  disabled={updatingStatus}
-                  size="sm"
-                >
-                  {updatingStatus ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Procesando...
-                    </>
-                  ) : (
-                    "Aceptar Solicitud"
-                  )}
-                </Button>
+              
+              {isWorker(role) && (
+                <Alert className="bg-primary/5 border-primary/20">
+                  <Briefcase className="h-4 w-4 text-primary" />
+                  <AlertDescription className="text-sm">
+                    <p className="font-medium mb-1 text-primary">Como trabajador, puedes cambiar el estado:</p>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      {request.status === "pending" && <li>Aceptar o rechazar la solicitud</li>}
+                      {request.status === "accepted" && <li>Marcar como "En Progreso" cuando comiences</li>}
+                      {request.status === "in_progress" && <li>Marcar como "Completada" cuando termines</li>}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
               )}
-              {canCancel && (
-                <Button
-                  onClick={() => handleStatusUpdate("cancelled")}
-                  disabled={updatingStatus}
-                  variant="destructive"
-                  size="sm"
-                >
-                  Cancelar
-                </Button>
-              )}
-              {canDelete && (
-                <Button
-                  onClick={() => setShowDeleteModal(true)}
-                  disabled={updatingStatus}
-                  variant="destructive"
-                  size="sm"
-                >
-                  Eliminar
-                </Button>
-              )}
-              {isWorker(role) && request.status === "accepted" && (
-                <Button
-                  onClick={() => handleStatusUpdate("in_progress")}
-                  disabled={updatingStatus}
-                  size="sm"
-                >
-                  Iniciar Trabajo
-                </Button>
-              )}
-              {isWorker(role) && request.status === "in_progress" && (
-                <Button
-                  onClick={() => handleStatusUpdate("completed")}
-                  disabled={updatingStatus}
-                  size="sm"
-                >
-                  Marcar como Completada
-                </Button>
-              )}
+
+              {/* Botones de acción */}
+              <div className="flex flex-wrap gap-2">
+                {canChat && (
+                  <Button
+                    onClick={() => navigate(`${ROUTES.DASHBOARD.CHATS}?requestId=${request.id}`)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Ir al Chat
+                  </Button>
+                )}
+                {canAccept && (
+                  <Button
+                    onClick={() => handleStatusUpdate("accepted")}
+                    disabled={updatingStatus}
+                    size="sm"
+                  >
+                    {updatingStatus ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Procesando...
+                      </>
+                    ) : (
+                      "Aceptar Solicitud"
+                    )}
+                  </Button>
+                )}
+                {canCancel && (
+                  <Button
+                    onClick={() => handleStatusUpdate("cancelled")}
+                    disabled={updatingStatus}
+                    variant="destructive"
+                    size="sm"
+                  >
+                    Cancelar
+                  </Button>
+                )}
+                {canDelete && (
+                  <Button
+                    onClick={() => setShowDeleteModal(true)}
+                    disabled={updatingStatus}
+                    variant="destructive"
+                    size="sm"
+                  >
+                    Eliminar
+                  </Button>
+                )}
+                {isWorker(role) && request.status === "accepted" && (
+                  <Button
+                    onClick={() => handleStatusUpdate("in_progress")}
+                    disabled={updatingStatus}
+                    size="sm"
+                  >
+                    Iniciar Trabajo
+                  </Button>
+                )}
+                {isWorker(role) && request.status === "in_progress" && (
+                  <Button
+                    onClick={() => handleStatusUpdate("completed")}
+                    disabled={updatingStatus}
+                    size="sm"
+                  >
+                    Marcar como Completada
+                  </Button>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -403,9 +478,10 @@ export function DashboardRequestDetailPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Reseña</CardTitle>
+              <CardTitle>Reseña del Servicio</CardTitle>
               {canCreateReview && (
-                <Button onClick={() => setShowReviewForm(true)} size="sm">
+                <Button onClick={() => setShowReviewForm(true)} size="sm" className="gap-2">
+                  <Star className="h-4 w-4" />
                   Crear Reseña
                 </Button>
               )}
@@ -413,17 +489,97 @@ export function DashboardRequestDetailPage() {
           </CardHeader>
           <CardContent>
             {review ? (
-              <ReviewCard review={review} />
+              <div className="space-y-4">
+                <ReviewCard review={review} />
+                {isClient(role) && (
+                  <Alert className="bg-primary/5 border-primary/20">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <AlertDescription className="text-sm">
+                      Has dejado una reseña para este servicio. Gracias por tu opinión.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
             ) : request.status === "completed" ? (
-              <p className="text-sm text-muted-foreground">
-                {isClient(role) 
-                  ? "Aún no has creado una reseña para este servicio."
-                  : "El cliente aún no ha creado una reseña."}
-              </p>
+              <div className="space-y-4">
+                {isClient(role) ? (
+                  <div className="space-y-3">
+                    <Alert className="bg-primary/10 border-primary/20">
+                      <Star className="h-4 w-4 text-primary" />
+                      <AlertDescription>
+                        <p className="font-semibold mb-2 text-primary">¡El servicio ha sido completado!</p>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Ahora puedes calificar el trabajo realizado. Tu opinión ayuda a otros usuarios a conocer la calidad del servicio.
+                        </p>
+                      </AlertDescription>
+                    </Alert>
+                    <Button 
+                      onClick={() => setShowReviewForm(true)} 
+                      className="w-full sm:w-auto"
+                      size="lg"
+                    >
+                      <Star className="mr-2 h-4 w-4" />
+                      Dejar Reseña
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    El cliente aún no ha creado una reseña para este servicio.
+                  </p>
+                )}
+              </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Las reseñas solo están disponibles para servicios completados.
-              </p>
+              <div className="space-y-3">
+                <Alert className="bg-muted border-border">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <p className="font-medium mb-2">
+                      {isClient(role) 
+                        ? "El servicio aún no ha sido completado" 
+                        : "Las reseñas solo están disponibles para servicios completados"}
+                    </p>
+                    <div className="text-sm text-muted-foreground space-y-2">
+                      {isClient(role) ? (
+                        <>
+                          <p>Para poder dejar una reseña, el trabajador debe:</p>
+                          <ol className="list-decimal list-inside ml-2 space-y-1">
+                            <li>Aceptar la solicitud (si está pendiente)</li>
+                            <li>Marcar el servicio como "En Progreso"</li>
+                            <li>Marcar el servicio como "Completada"</li>
+                          </ol>
+                          <p className="mt-2 font-medium text-foreground">
+                            Estado actual: <span className="capitalize">{currentStatusConfig.label}</span>
+                          </p>
+                        </>
+                      ) : (
+                        <p>
+                          Una vez que marques el servicio como "Completada", el cliente podrá dejar una reseña.
+                        </p>
+                      )}
+                    </div>
+                  </AlertDescription>
+                </Alert>
+                {isWorker(role) && request.status === "in_progress" && (
+                  <Button
+                    onClick={() => handleStatusUpdate("completed")}
+                    disabled={updatingStatus}
+                    size="sm"
+                    className="w-full sm:w-auto"
+                  >
+                    {updatingStatus ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Procesando...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Marcar como Completada
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>

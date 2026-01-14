@@ -85,12 +85,20 @@ export function DashboardRequestsPage() {
       // Recargar lista después de actualizar
       await load(statusFilter);
       // Mostrar mensaje de éxito temporal
-      setSuccessMessage(
-        status === "accepted" ? "Solicitud aceptada exitosamente" :
-        status === "cancelled" ? "Solicitud cancelada exitosamente" :
-        "Estado actualizado exitosamente"
-      );
-      setTimeout(() => setSuccessMessage(null), 3000);
+      const successMsg = status === "accepted" 
+        ? "Solicitud aceptada exitosamente. Puedes ver los detalles y chatear con el cliente."
+        : status === "cancelled" 
+        ? "Solicitud cancelada exitosamente"
+        : "Estado actualizado exitosamente";
+      setSuccessMessage(successMsg);
+      setTimeout(() => setSuccessMessage(null), 5000);
+      
+      // Si se aceptó, redirigir al detalle para ver el resumen y opción de chat
+      if (status === "accepted" && isWorker(role)) {
+        setTimeout(() => {
+          navigate(`${ROUTES.DASHBOARD.REQUESTS}/${id}`);
+        }, 1000);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "No se pudo actualizar la solicitud";
       setError(errorMessage);

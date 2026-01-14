@@ -11,6 +11,7 @@ import { AlertCircle, MessageSquare } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/shared/lib/utils";
+import { getUserAvatar } from "@/shared/utils/avatar-utils";
 
 interface ConversationListProps {
   selectedConversationId?: string;
@@ -112,6 +113,13 @@ export function ConversationList({ selectedConversationId, onSelectConversation 
         const fullName = `${firstName} ${lastName}`.trim() || "Usuario";
         const isSelected = selectedConversationId === conversation.request_id;
 
+        // Generar avatar si no existe
+        const displayAvatar = getUserAvatar(
+          otherUser?.id || conversation.id,
+          otherUser?.avatar,
+          fullName
+        );
+
         return (
           <Card
             key={conversation.id}
@@ -124,7 +132,7 @@ export function ConversationList({ selectedConversationId, onSelectConversation 
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={otherUser.avatar || undefined} alt={fullName} />
+                  <AvatarImage src={displayAvatar} alt={fullName} />
                   <AvatarFallback className="text-sm">{initials}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
