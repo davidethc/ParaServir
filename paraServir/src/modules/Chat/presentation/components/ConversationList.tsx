@@ -1,171 +1,193 @@
-import { useEffect, useState, useMemo } from "react";
-import { Card, CardContent } from "@/shared/components/ui/card";
-import { Avatar, AvatarImage, AvatarFallback } from "@/shared/components/ui/avatar";
-import { Badge } from "@/shared/components/ui/badge";
-import { LoadingState } from "@/shared/components/feedback/LoadingState";
-import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import { ChatController } from "../../infra/http/controllers/chat.controller";
+import { useState, useMemo } from "react";
+import { Input } from "@/shared/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Search, MessageCircle } from "lucide-react";
+import { ConversationItem } from "./ConversationItem";
+import { EmptyState } from "./EmptyState";
 import type { ConversationDto } from "../../application/dto/conversation.dto";
-import { useAuth } from "@/shared/hooks/useAuth";
-import { AlertCircle, MessageSquare } from "lucide-react";
-import { format, formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
+import type { ConversationFilter } from "../../application/types/chat.types";
 import { cn } from "@/shared/lib/utils";
-import { getUserAvatar } from "@/shared/utils/avatar-utils";
 
 interface ConversationListProps {
+  conversations: ConversationDto[];
   selectedConversationId?: string;
   onSelectConversation: (conversation: ConversationDto) => void;
+  loading?: boolean;
 }
 
-export function ConversationList({ selectedConversationId, onSelectConversation }: ConversationListProps) {
-  const [conversations, setConversations] = useState<ConversationDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { getToken } = useAuth();
-  const controller = useMemo(() => new ChatController(), []);
+/**
+ * Modern conversation list with search, filters, and smooth scrolling
+ * Features: search, filter tabs, custom scrollbar, empty states
+ */
+export function ConversationList({
+  conversations,
+  selectedConversationId,
+  onSelectConversation,
+  loading = false,
+}: ConversationListProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState<ConversationFilter>("all");
 
-  useEffect(() => {
-    const loadConversations = async () => {
-      setLoading(true);
-      setError(null);
+  // Filter and search conversations
+  const filteredConversations = useMemo(() => {
+    let result = [...conversations];
 
-      try {
-        const token = getToken();
-        if (!token) {
-          setError("Sesión expirada. Inicia sesión nuevamente.");
-          return;
-        }
-
-        const response = await controller.getConversations(token);
-        setConversations(response.conversations || []);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Error al cargar conversaciones";
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void loadConversations();
-  }, [controller, getToken]);
-
-  const formatLastMessageTime = (dateString?: string | null) => {
-    if (!dateString) return "";
-    try {
-      const date = new Date(dateString);
-      const now = new Date();
-      const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-      
-      if (diffInHours < 24) {
-        return formatDistanceToNow(date, { addSuffix: true, locale: es });
-      }
-      return format(date, "dd/MM/yyyy", { locale: es });
-    } catch {
-      return "";
+    // Apply search
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((conv) => {
+        const fullName = `${conv.other_user?.first_name} ${conv.other_user?.last_name}`.toLowerCase();
+        const lastMessage = conv.last_message?.toLowerCase() || "";
+        return fullName.includes(query) || lastMessage.includes(query);
+      });
     }
-  };
 
-  if (loading) {
-    return <LoadingState message="Cargando conversaciones..." variant="list" count={3} />;
-  }
+    // Apply filter
+    switch (activeFilter) {
+      case "active":
+        result = result.filter((conv) =>
+          conv.status === "pending" || conv.status === "accepted"
+        );
+        break;
+      case "archived":
+        result = result.filter((conv) => conv.isArchived === true);
+        break;
+      default:
+        // "all" - show non-archived
+        result = result.filter((conv) => !conv.isArchived);
+        break;
+    }
 
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    );
-  }
+    // Sort by: pinned first, then by last message time
+    result.sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
 
-  if (conversations.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-8">
-          <div className="text-center">
-            <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Aún no tienes conversaciones</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Las conversaciones aparecerán cuando tengas solicitudes de servicio con trabajadores asignados
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+      const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+      const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    return result;
+  }, [conversations, searchQuery, activeFilter]);
 
   return (
-    <div className="space-y-2">
-      {conversations.map((conversation) => {
-        const otherUser = conversation.other_user;
-        const firstName = otherUser?.first_name || "";
-        const lastName = otherUser?.last_name || "";
-        const getInitials = () => {
-          if (firstName && lastName) {
-            return `${firstName[0]}${lastName[0]}`.toUpperCase();
-          }
-          if (firstName) return firstName[0].toUpperCase();
-          if (lastName) return lastName[0].toUpperCase();
-          return "?";
-        };
-        const initials = getInitials();
-        const fullName = `${firstName} ${lastName}`.trim() || "Usuario";
-        const isSelected = selectedConversationId === conversation.request_id;
+    <div className="flex flex-col h-full bg-white border-r border-border">
+      {/* Header */}
+      <div className="px-4 py-5 border-b border-border">
+        <h1 className="text-2xl font-bold text-foreground mb-1">Chats</h1>
+        <p className="text-sm text-muted-foreground">
+          {conversations.length} {conversations.length === 1 ? "conversación" : "conversaciones"}
+        </p>
+      </div>
 
-        // Generar avatar si no existe
-        const displayAvatar = getUserAvatar(
-          otherUser?.id || conversation.id,
-          otherUser?.avatar,
-          fullName
-        );
+      {/* Search bar */}
+      <div className="px-4 py-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Buscar conversaciones..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 bg-white border-border rounded-lg"
+          />
+        </div>
+      </div>
 
-        return (
-          <Card
-            key={conversation.id}
-            className={cn(
-              "cursor-pointer transition-all hover:shadow-md",
-              isSelected && "ring-2 ring-primary"
-            )}
-            onClick={() => onSelectConversation(conversation)}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={displayAvatar} alt={fullName} />
-                  <AvatarFallback className="text-sm">{initials}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <h3 className="font-semibold text-sm truncate">{fullName}</h3>
-                    {conversation.unread_count > 0 && (
-                      <Badge variant="default" className="text-xs">
-                        {conversation.unread_count}
-                      </Badge>
-                    )}
-                  </div>
-                  {conversation.last_message && (
-                    <p className="text-sm text-muted-foreground truncate mb-1">
-                      {conversation.last_message}
-                    </p>
-                  )}
-                  <div className="flex items-center justify-between gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      {conversation.status}
-                    </Badge>
-                    {conversation.last_message_at && (
-                      <span className="text-xs text-muted-foreground">
-                        {formatLastMessageTime(conversation.last_message_at)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+      {/* Filter tabs */}
+      <div className="px-4 pb-2">
+        <Tabs value={activeFilter} onValueChange={(v) => setActiveFilter(v as ConversationFilter)}>
+          <TabsList className="w-full grid grid-cols-3 bg-muted/30">
+            <TabsTrigger
+              value="all"
+              className={cn(
+                "text-sm data-[state=active]:bg-primary/10",
+                "data-[state=active]:border-b-2 data-[state=active]:border-primary"
+              )}
+            >
+              Todos
+            </TabsTrigger>
+            <TabsTrigger
+              value="active"
+              className={cn(
+                "text-sm data-[state=active]:bg-primary/10",
+                "data-[state=active]:border-b-2 data-[state=active]:border-primary"
+              )}
+            >
+              Activos
+            </TabsTrigger>
+            <TabsTrigger
+              value="archived"
+              className={cn(
+                "text-sm data-[state=active]:bg-primary/10",
+                "data-[state=active]:border-b-2 data-[state=active]:border-primary"
+              )}
+            >
+              Archivados
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {/* Conversation list */}
+      <div
+        className={cn(
+          "flex-1 overflow-y-auto",
+          // Custom scrollbar
+          "scrollbar-thin scrollbar-thumb-rounded-full",
+          "scrollbar-track-transparent scrollbar-thumb-muted-foreground/20",
+          "hover:scrollbar-thumb-muted-foreground/30"
+        )}
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#D1D5DB transparent',
+        }}
+      >
+        {loading ? (
+          <div className="p-4 space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-16 bg-muted/50 rounded-lg animate-pulse"
+              />
+            ))}
+          </div>
+        ) : filteredConversations.length === 0 ? (
+          searchQuery ? (
+            <EmptyState
+              icon={Search}
+              title="No se encontraron resultados"
+              description={`No hay conversaciones que coincidan con "${searchQuery}"`}
+            />
+          ) : (
+            <EmptyState
+              icon={MessageCircle}
+              title={
+                activeFilter === "archived"
+                  ? "No hay conversaciones archivadas"
+                  : "No hay conversaciones aún"
+              }
+              description={
+                activeFilter === "archived"
+                  ? "Las conversaciones archivadas aparecerán aquí"
+                  : "Tus chats aparecerán cuando tengas solicitudes de servicio activas"
+              }
+            />
+          )
+        ) : (
+          <div className="py-2">
+            {filteredConversations.map((conversation) => (
+              <ConversationItem
+                key={conversation.id}
+                conversation={conversation}
+                isSelected={selectedConversationId === conversation.request_id}
+                onSelect={() => onSelectConversation(conversation)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-

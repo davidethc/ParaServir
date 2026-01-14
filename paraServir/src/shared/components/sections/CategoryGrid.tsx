@@ -1,29 +1,27 @@
 import { CategoryCard } from "@/shared/components/cards/CategoryCard";
-import { Skeleton } from "@/shared/components/ui/skeleton";
+import { CategoryCardSkeleton } from "@/shared/components/skeletons/CategoryCardSkeleton";
 import type { ServiceCategoryDto } from "@/modules/ServiceCategories/application/dto/service-category.dto";
 
 interface CategoryGridProps {
   categories: ServiceCategoryDto[];
   loading?: boolean;
   onCategoryClick?: (categoryId: string) => void;
+  onFavoriteToggle?: (categoryId: string, isFavorite: boolean) => void;
 }
 
-function CategoryCardSkeleton() {
-  return (
-    <div className="border border-border rounded-lg overflow-hidden bg-card">
-      <Skeleton className="h-32 w-full" />
-      <div className="p-4 space-y-2">
-        <Skeleton className="h-5 w-3/4" />
-        <Skeleton className="h-4 w-1/2" />
-      </div>
-    </div>
-  );
-}
-
-export function CategoryGrid({ categories, loading = false, onCategoryClick }: CategoryGridProps) {
+/**
+ * Responsive grid for category cards
+ * Breakpoints: 1 col (mobile) → 2 cols (tablet) → 3 cols (desktop) → 4 cols (xl)
+ */
+export function CategoryGrid({
+  categories,
+  loading = false,
+  onCategoryClick,
+  onFavoriteToggle
+}: CategoryGridProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {Array.from({ length: 8 }).map((_, index) => (
           <CategoryCardSkeleton key={index} />
         ))}
@@ -40,12 +38,13 @@ export function CategoryGrid({ categories, loading = false, onCategoryClick }: C
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {categories.map((category) => (
         <CategoryCard
           key={category.id}
           category={category}
           onClick={onCategoryClick}
+          onFavoriteToggle={onFavoriteToggle}
         />
       ))}
     </div>

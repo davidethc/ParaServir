@@ -31,36 +31,42 @@ export function DashboardHomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-accent-soft/50 to-background border-b border-border">
+      <section className="relative overflow-hidden bg-linear-to-br from-primary/5 via-accent-soft/50 to-background border-b border-border">
         <PageContainer className="relative py-12 md:py-16 lg:py-20">
           <div className="max-w-4xl mx-auto text-center space-y-6">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-sm font-medium text-primary mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <Sparkles className="h-4 w-4" />
               <span>Marketplace de servicios profesionales</span>
             </div>
-            
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight animate-in fade-in slide-in-from-bottom-5 duration-500 delay-100">
-              Encuentra el profesional
-              <span className="block text-primary mt-2">
+
+            <h1 className="text-4xl md:text-5xl lg:text-6xl leading-tight animate-in fade-in slide-in-from-bottom-5 duration-500 delay-100">
+              <span className="block font-extrabold text-[#1F2937]">Encuentra el profesional</span>
+              <span className="block mt-2 bg-linear-to-r from-[#58A3B0] to-[#5877B0] bg-clip-text text-transparent font-semibold">
                 perfecto para tu proyecto
               </span>
             </h1>
-            
+
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-6 duration-500 delay-200">
               Conecta con expertos calificados, compara precios y contrata servicios de calidad con total confianza.
             </p>
 
-            <div className="max-w-2xl mx-auto mt-8 p-2 bg-card rounded-2xl shadow-lg border border-border animate-in fade-in slide-in-from-bottom-7 duration-500 delay-300">
+            <div className="max-w-2xl mx-auto mt-8 p-2 bg-card rounded-2xl border border-border animate-in fade-in slide-in-from-bottom-7 duration-500 delay-300" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)" }}>
               <form onSubmit={(e) => { e.preventDefault(); const input = e.currentTarget.querySelector('input'); if (input) handleSearch(input.value); }} className="flex gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input 
-                    placeholder="¿Qué servicio estás buscando?" 
-                    className="pl-10 h-12 border-transparent bg-secondary/50 focus:bg-background focus:border-primary/20"
+                  <Input
+                    placeholder="¿Qué servicio estás buscando?"
+                    className="pl-10 h-12 bg-background border border-[#E5E7EB] focus:border-[#58A3B0] px-4 py-3 transition-all duration-200"
+                    style={{ borderRadius: "4px" }}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch(e.currentTarget.value)}
                   />
                 </div>
-                <Button type="submit" size="lg" className="h-12 px-8">
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="h-12 px-8 bg-[#58A3B0] hover:bg-[#66b7c4] text-white transition-all duration-200"
+                  style={{ borderRadius: "6px" }}
+                >
                   Buscar
                 </Button>
               </form>
@@ -77,8 +83,8 @@ export function DashboardHomePage() {
               <h2 className="text-2xl font-bold text-foreground">Categorías Populares</h2>
               <p className="text-muted-foreground">Explora los servicios más solicitados</p>
             </div>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className="gap-2 text-primary hover:text-primary-hover"
               onClick={() => navigate(ROUTES.DASHBOARD.CATEGORIES)}
             >

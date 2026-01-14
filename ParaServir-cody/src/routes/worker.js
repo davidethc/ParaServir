@@ -1,11 +1,11 @@
-import {Router} from "express";
-import { 
-    list, 
-    watch, 
-    upsertProfile, 
-    createServices, 
-    getWorkerServices, 
-    updateService, 
+import { Router } from "express";
+import {
+    list,
+    watch,
+    upsertProfile,
+    createServices,
+    getWorkerServices,
+    updateService,
     deleteService,
     updateLocation,
     findNearbyWorkers,
@@ -16,14 +16,14 @@ import { auth, requireRole } from "../middlewares/auth.js";
 const router = Router();
 
 router.get('/list', auth, list);
-router.get('/watch/:id', auth,  watch);
+router.get('/watch/:id', auth, watch);
 
 // Onboarding/actualización del perfil de trabajador
 router.post('/profile', auth, requireRole('trabajador'), upsertProfile);
 
 // Servicios de trabajador
 router.get('/:id/services', auth, getWorkerServices);
-router.post('/services', auth, requireRole('trabajador'), createServices);
+router.post('/services', auth, createServices);
 router.put('/services/:id', auth, requireRole('trabajador'), updateService);
 router.delete('/services/:id', auth, requireRole('trabajador'), deleteService);
 

@@ -25,8 +25,8 @@ import { Badge } from "@/shared/components/ui/badge";
 import { cn } from "@/shared/lib/utils";
 import { logout } from "@/Store/slices/authSlice";
 import type { RootState } from "@/Store";
-import { getUserAvatar } from "@/shared/utils/avatar-utils";
 import { NotificationBell } from "@/modules/Notifications/presentation/components/NotificationBell";
+import { getUserAvatar } from "@/shared/Utils/avatar-utils";
 
 interface NavItem {
   label: string;
@@ -103,7 +103,7 @@ export function DashboardSidebar() {
   };
 
   // Generar avatar para el usuario
-  const userAvatar = user?.id 
+  const userAvatar = user?.id
     ? getUserAvatar(user.id, undefined, getUserDisplayName())
     : undefined;
 
@@ -130,7 +130,12 @@ export function DashboardSidebar() {
         <Link to={ROUTES.DASHBOARD.HOME}>
           <Button
             variant={isActive(ROUTES.DASHBOARD.HOME) ? "default" : "ghost"}
-            className="w-full justify-start gap-2"
+            className={cn(
+              "w-full justify-start gap-2 transition-all duration-200",
+              isActive(ROUTES.DASHBOARD.HOME)
+                ? "bg-[rgba(88,163,176,0.1)] text-[#58A3B0] hover:bg-[rgba(88,163,176,0.15)] hover:text-[#58A3B0] border-l-[3px] border-l-[#58A3B0] rounded-l-none"
+                : "text-muted-foreground hover:bg-accent-soft hover:text-[#58A3B0]"
+            )}
           >
             <LayoutDashboard className="h-4 w-4" />
             Dashboard
@@ -154,8 +159,8 @@ export function DashboardSidebar() {
                     className={cn(
                       "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                       active
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "text-muted-foreground hover:bg-accent-soft hover:text-primary"
+                        ? "bg-[rgba(88,163,176,0.1)] text-[#58A3B0] border-l-[3px] border-l-[#58A3B0] rounded-l-none font-semibold"
+                        : "text-muted-foreground hover:bg-accent-soft hover:text-[#58A3B0]"
                     )}
                   >
                     <div className="flex items-center gap-2">
@@ -186,9 +191,9 @@ export function DashboardSidebar() {
                     variant="ghost"
                     className={cn(
                       "w-full justify-start gap-2 font-medium transition-all duration-200",
-                      active 
-                        ? "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary" 
-                        : "text-muted-foreground hover:bg-accent-soft hover:text-primary"
+                      active
+                        ? "bg-[rgba(88,163,176,0.1)] text-[#58A3B0] hover:bg-[rgba(88,163,176,0.15)] hover:text-[#58A3B0] border-l-[3px] border-l-[#58A3B0] rounded-l-none"
+                        : "text-muted-foreground hover:bg-accent-soft hover:text-[#58A3B0]"
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -205,12 +210,11 @@ export function DashboardSidebar() {
       <div className="p-4 border-t border-border space-y-2">
         {/* Centro de Ayuda */}
         <Link to={ROUTES.DASHBOARD.HELP}>
-          <Button variant="ghost" className="w-full justify-start gap-2 relative">
+          <Button variant="ghost" className="w-full justify-start gap-2 relative transition-all duration-200 hover:bg-accent-soft hover:text-[#58A3B0]">
             <HelpCircle className="h-4 w-4" />
             Centro de Ayuda
             <Badge
-              variant="destructive"
-              className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs"
+              className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs bg-[#6558B0] hover:bg-[#7566c4] text-white border-0"
             >
               8
             </Badge>
@@ -219,7 +223,7 @@ export function DashboardSidebar() {
 
         {/* Configuración */}
         <Link to={ROUTES.DASHBOARD.SETTINGS}>
-          <Button variant="ghost" className="w-full justify-start gap-2">
+          <Button variant="ghost" className="w-full justify-start gap-2 transition-all duration-200 hover:bg-accent-soft hover:text-[#58A3B0]">
             <Settings className="h-4 w-4" />
             Configuración
           </Button>

@@ -1,31 +1,54 @@
 import { Card } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Users, Briefcase, Heart } from "lucide-react";
 import type { ServiceCategoryDto } from "@/modules/ServiceCategories/application/dto/service-category.dto";
 import { cn } from "@/shared/lib/utils";
-import { getCategoryImage } from "@/shared/utils/category-images";
+import { getCategoryImage } from "@/shared/Utils/category-images";
+import { useState } from "react";
 
 interface CategoryCardProps {
   category: ServiceCategoryDto;
   onClick?: (categoryId: string) => void;
+  onFavoriteToggle?: (categoryId: string, isFavorite: boolean) => void;
   className?: string;
 }
 
 /**
- * Card profesional para categorías de servicios
- * Diseño limpio con imagen destacada y espaciado mejorado
+ * Modern category card with glassmorphism effects and microinteractions
+ * Features: hover animations, quick actions, favorite toggle, icon-based stats
  */
-export function CategoryCard({ category, onClick, className }: CategoryCardProps) {
+export function CategoryCard({
+  category,
+  onClick,
+  onFavoriteToggle,
+  className
+}: CategoryCardProps) {
+  const [isFavorite, setIsFavorite] = useState(category.isFavorite ?? false);
+
   const handleClick = () => {
     if (onClick) {
       onClick(category.id);
     }
   };
 
+  const handleFavoriteToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newFavoriteState = !isFavorite;
+    setIsFavorite(newFavoriteState);
+    if (onFavoriteToggle) {
+      onFavoriteToggle(category.id, newFavoriteState);
+    }
+  };
+
+  const handleQuickAction = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    handleClick();
+  };
+
   const icon = category.icon || category.name.charAt(0).toUpperCase();
   const workersCount = category.workers_count ?? 0;
   const servicesCount = category.services_count ?? 0;
-  
+
   // Obtener imagen de la categoría desde Assets
   const imageUrl = getCategoryImage(category.name) || (category as any).image_url || (category as any).imageUrl || null;
 
@@ -33,6 +56,11 @@ export function CategoryCard({ category, onClick, className }: CategoryCardProps
     <Card
       className={cn(
         "group relative overflow-hidden cursor-pointer",
+        "border-0 rounded-xl",
+        "shadow-[0_4px_6px_rgba(0,0,0,0.07)]",
+        "hover:shadow-[0_20px_25px_rgba(0,0,0,0.15)]",
+        "hover:-translate-y-2",
+        "transition-all duration-300 ease-in-out",
         className
       )}
       onClick={handleClick}
@@ -46,18 +74,27 @@ export function CategoryCard({ category, onClick, className }: CategoryCardProps
       }}
       aria-label={`Explorar categoría ${category.name}`}
     >
-      {/* Área de imagen - Ocupa todo el ancho */}
-      <div className="relative w-full h-48 bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 overflow-hidden">
+      {/* Image Area with Overlay Gradient - 240px height */}
+      <div className="relative w-full h-60 overflow-hidden">
         {imageUrl ? (
-          // Si hay imagen real, mostrarla
-          <img
-            src={imageUrl}
-            alt={category.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
+          <>
+            {/* Real image */}
+            <img
+              src={imageUrl}
+              alt={category.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+            />
+            {/* Gradient overlay */}
+            <div
+              className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-black/70"
+              style={{
+                background: 'linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.7) 100%)'
+              }}
+            />
+          </>
         ) : (
-          // Placeholder mejorado con gradiente y icono
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10">
+          // Placeholder with gradient and icon
+          <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-primary/30 via-primary/20 to-primary/10">
             <div className="w-24 h-24 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
               {category.icon ? (
                 <span className="text-5xl">{category.icon}</span>
@@ -70,56 +107,121 @@ export function CategoryCard({ category, onClick, className }: CategoryCardProps
           </div>
         )}
 
-        {/* Badge de contador en esquina */}
+        {/* Glassmorphism Badge - Counter */}
         {(workersCount > 0 || servicesCount > 0) && (
           <div className="absolute top-3 right-3">
-            <Badge variant="secondary" className="bg-white/90 backdrop-blur-sm text-xs font-semibold shadow-sm">
-              <Sparkles className="h-3 w-3 mr-1" />
-              {servicesCount > 0 ? servicesCount : workersCount}
+            <Badge
+              className={cn(
+                "bg-white/95 backdrop-blur-sm",
+                "border border-white/30",
+                "shadow-[0_2px_8px_rgba(0,0,0,0.1)]",
+                "text-[13px] font-semibold",
+                "px-3 py-1.5 rounded-[20px]"
+              )}
+              style={{
+                color: '#58A3B0'
+              }}
+            >
+              #{servicesCount > 0 ? servicesCount : workersCount}
             </Badge>
           </div>
         )}
+
+        {/* Favorite/Bookmark Toggle - Top Left */}
+        <button
+          onClick={handleFavoriteToggle}
+          className={cn(
+            "absolute top-3 left-3 z-10",
+            "w-9 h-9 rounded-full",
+            "bg-white/95 backdrop-blur-sm",
+            "border border-white/30",
+            "shadow-[0_2px_8px_rgba(0,0,0,0.1)]",
+            "flex items-center justify-center",
+            "transition-all duration-200",
+            "hover:scale-110 active:scale-95",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          )}
+          aria-label={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+        >
+          <Heart
+            className={cn(
+              "h-4 w-4 transition-colors duration-200",
+              isFavorite ? "fill-primary text-primary" : "text-gray-400"
+            )}
+          />
+        </button>
       </div>
-      
-      {/* Contenido con mejor espaciado */}
-      <div className="p-6">
-        {/* Título y flecha */}
-        <div className="flex items-start justify-between gap-3 mb-4">
-          <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors flex-1 leading-tight">
-            {category.name}
-          </h3>
-          <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 flex-shrink-0 mt-0.5" />
-        </div>
-        
-        {/* Descripción con espaciado mejorado */}
+
+      {/* Content Section - 20px padding */}
+      <div className="p-5">
+        {/* Title */}
+        <h3 className="text-[20px] font-bold text-foreground mb-4 leading-tight line-clamp-1">
+          {category.name}
+        </h3>
+
+        {/* Description - Limited to 2 lines */}
         {category.description && (
-          <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+          <p className="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-2">
             {category.description}
           </p>
         )}
 
-        {/* Stats */}
+        {/* Enhanced Statistics Section with Icons */}
         {(workersCount > 0 || servicesCount > 0) && (
-          <div className="flex items-center gap-6 pt-4 border-t border-border/50">
+          <div className="flex items-center gap-4 mt-4">
             {workersCount > 0 && (
-              <div className="flex flex-col">
-                <span className="text-xs text-muted-foreground mb-1">Trabajadores</span>
-                <span className="text-sm font-semibold text-foreground">{workersCount}</span>
+              <div
+                className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                style={{ backgroundColor: '#F9FAFB' }}
+              >
+                <Users className="h-4 w-4" style={{ color: '#58A3B0' }} />
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground">Trabajadores</span>
+                  <span className="text-sm font-bold" style={{ color: '#1F2937' }}>
+                    {workersCount}
+                  </span>
+                </div>
               </div>
             )}
             {servicesCount > 0 && (
-              <div className="flex flex-col">
-                <span className="text-xs text-muted-foreground mb-1">Servicios</span>
-                <span className="text-sm font-semibold text-foreground">{servicesCount}</span>
+              <div
+                className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                style={{ backgroundColor: '#F9FAFB' }}
+              >
+                <Briefcase className="h-4 w-4" style={{ color: '#58A3B0' }} />
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground">Servicios</span>
+                  <span className="text-sm font-bold" style={{ color: '#1F2937' }}>
+                    {servicesCount}
+                  </span>
+                </div>
               </div>
             )}
           </div>
         )}
       </div>
 
-      {/* Indicador de hover */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/50 to-primary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
+      {/* Quick Action Button - Appears on Hover */}
+      <button
+        onClick={handleQuickAction}
+        className={cn(
+          "absolute bottom-4 right-4",
+          "flex items-center gap-2",
+          "px-5 py-2.5 rounded-lg",
+          "text-sm font-medium text-white",
+          "transition-all duration-300 ease-out",
+          "opacity-0 translate-y-5 group-hover:opacity-100 group-hover:translate-y-0",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
+        )}
+        style={{ backgroundColor: '#58A3B0' }}
+        aria-label="Ver servicios de esta categoría"
+      >
+        Ver servicios
+        <ArrowRight className="h-4 w-4" />
+      </button>
+
+      {/* Bottom Accent Line (subtle hover indicator) */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-linear-to-r from-primary via-primary/50 to-primary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
     </Card>
   );
 }
-

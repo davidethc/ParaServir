@@ -8,5 +8,7 @@ export interface ServiceCategoryDto {
     services_count?: number;
     image_url?: string;
     imageUrl?: string;
+    created_at?: string;          // For "Recent" filter
+    isFavorite?: boolean;         // For bookmark feature (client-side)
 }
 

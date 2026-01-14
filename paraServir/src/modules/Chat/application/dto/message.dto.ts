@@ -9,6 +9,8 @@ export interface MessageDto {
   sender_name: string;
   sender_avatar?: string | null;
   is_own: boolean;
+  status?: 'sent' | 'delivered' | 'read';   // Estado del mensaje
+  type?: 'text' | 'image' | 'file';         // Tipo de mensaje
 }
 
 /**

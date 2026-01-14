@@ -9,7 +9,6 @@ import { Alert } from "@/shared/components/ui/alert";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { AuthController } from "@/modules/Auth/infra/http/controllers/auth.controller";
 import { AuthFooter } from "@/shared/components/layout/AuthFooter";
-import { GoogleAuthButton } from "./components/GoogleAuthButton";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -24,7 +23,7 @@ export function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    
+
     if (!email || !password) {
       setError("Todos los campos son obligatorios");
       return;
@@ -48,7 +47,7 @@ export function LoginForm() {
       // Redirigir según el rol del usuario
       const redirectRoute = getPostLoginRoute(response.user.role);
       // Login exitoso, redirigir según rol
-      
+
       // Usar setTimeout para asegurar que Redux se actualice antes de navegar
       setTimeout(() => {
         navigate(redirectRoute, { replace: true });
@@ -124,20 +123,14 @@ export function LoginForm() {
                   <Link to={ROUTES.PUBLIC.FORGOT_PASSWORD} className="text-primary hover:text-primary-hover hover:underline font-medium">¿Olvidaste tu contraseña?</Link>
                 </div>
               </div>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full font-medium py-2"
                 disabled={loading}
               >
                 {loading ? "Iniciando sesión..." : "Iniciar sesión"}
               </Button>
-              <div className="flex items-center gap-2 my-2">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-muted-foreground text-xs">O ingresa con</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-              <GoogleAuthButton />
-              <div className="text-center text-sm mt-2 text-text-secondary">
+              <div className="text-center text-sm mt-4 text-text-secondary">
                 ¿No tienes cuenta?{' '}
                 <Link to={ROUTES.PUBLIC.REGISTER} className="text-primary hover:text-primary-hover hover:underline font-medium">Regístrate</Link>
               </div>
@@ -148,12 +141,12 @@ export function LoginForm() {
       </div>
       {/* Derecha: Logo */}
       <div className="hidden md:flex flex-1 items-center justify-center bg-secondary">
-          <img 
-           src="/src/shared/Assets/logo_servir.png" 
-           alt="Logo ParaServir" 
-           className="w-[620px] h-[620px] object-contain mx-auto mb-94"
-           style={{ minWidth: 520, minHeight: 520 }}
-          />
+        <img
+          src="/src/shared/Assets/logo_servir.png"
+          alt="Logo ParaServir"
+          className="w-[620px] h-[620px] object-contain mx-auto mb-94"
+          style={{ minWidth: 520, minHeight: 520 }}
+        />
       </div>
     </div>
   );
