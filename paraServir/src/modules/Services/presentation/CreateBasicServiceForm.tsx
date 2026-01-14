@@ -21,6 +21,10 @@ import type { UpdateServiceDto } from "../application/dto/update-service.dto";
 import { useCategories } from "@/shared/hooks/useCategories";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { isWorker } from "@/shared/constants/user-roles.constants";
+import { useGeolocation } from "@/shared/hooks/useGeolocation";
+import { MapPin, Navigation } from "lucide-react";
+import { HttpClientService } from "@/shared/services/http-client.service";
+import { API_CONFIG } from "@/modules/Reviews/infra/http/api.config";
 
 type FormMode = "create" | "edit";
 
@@ -47,8 +51,14 @@ export function CreateBasicServiceForm({
   const [priceType, setPriceType] = useState<"hourly" | "per_job">("hourly");
   const [priceRange, setPriceRange] = useState("");
   const [yearsExperience, setYearsExperience] = useState("");
+  const [address, setAddress] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [gettingLocation, setGettingLocation] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const { getCurrentLocation, updateLocation } = useGeolocation();
 
   const effectiveServiceId = serviceId || params.id;
   const serviceController = useMemo(() => new ServiceController(), []);
@@ -66,6 +76,39 @@ export function CreateBasicServiceForm({
     if (!categoryId && initialService?.category_id) {
       setCategoryId(initialService.category_id);
     }
+
+    // Cargar ubicación actual del usuario si existe
+    const loadUserLocation = async () => {
+      try {
+        const httpClient = new HttpClientService({ baseUrl: API_CONFIG.baseUrl });
+        const response = await httpClient.get<{ status: string; user: { latitude?: number; longitude?: number; location?: string } }>(
+          '/users/me',
+          { Authorization: `Bearer ${token}` }
+        );
+        if (response.user?.latitude && response.user?.longitude) {
+          // Asegurar que sean números
+          const lat = typeof response.user.latitude === 'string' 
+            ? parseFloat(response.user.latitude) 
+            : response.user.latitude;
+          const lng = typeof response.user.longitude === 'string' 
+            ? parseFloat(response.user.longitude) 
+            : response.user.longitude;
+          
+          if (!isNaN(lat) && !isNaN(lng)) {
+            setLatitude(lat);
+            setLongitude(lng);
+          }
+          
+          if (response.user.location) {
+            setAddress(response.user.location);
+          }
+        }
+      } catch (err) {
+        // Si falla, continuar sin ubicación (el usuario la deberá ingresar)
+        console.error('Error al cargar ubicación:', err);
+      }
+    };
+    loadUserLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -106,6 +149,12 @@ export function CreateBasicServiceForm({
 
     if (!yearsExperience) {
       setError("Debes seleccionar tus años de experiencia");
+      return;
+    }
+
+    // Validar ubicación
+    if (!address && (!latitude || !longitude)) {
+      setError("Debes proporcionar tu ubicación. Usa el botón 'Usar mi ubicación actual' o ingresa una dirección.");
       return;
     }
 
@@ -154,6 +203,20 @@ export function CreateBasicServiceForm({
           replace: true,
         });
       } else {
+        // Actualizar ubicación primero si es necesario
+        if (address || (latitude && longitude)) {
+          try {
+            await updateLocation({
+              address: address || undefined,
+              latitude: latitude || undefined,
+              longitude: longitude || undefined,
+            });
+          } catch (locError) {
+            console.error('Error al actualizar ubicación:', locError);
+            // Continuar de todas formas, el backend intentará geocodificar
+          }
+        }
+
         await serviceController.createBasicService({
           userId: finalUserId,
           category_id: categoryId,
@@ -162,6 +225,9 @@ export function CreateBasicServiceForm({
           price_type: priceType,
           price_range: priceType === "hourly" ? priceRange : undefined,
           years_experience: yearsExperience,
+          address: address || undefined,
+          latitude: latitude || undefined,
+          longitude: longitude || undefined,
         }, finalToken);
 
         // Redirigir al dashboard de servicios después de crear el servicio exitosamente
@@ -479,6 +545,61 @@ export function CreateBasicServiceForm({
                 >
                   500+
                 </SelectionButton>
+              </div>
+            </div>
+
+            {/* Ubicación */}
+            <div>
+              <Label htmlFor="address" className="font-medium text-foreground mb-3 block">
+                Ubicación <span className="text-destructive">*</span>
+              </Label>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    id="address"
+                    type="text"
+                    placeholder="Ej: Quito, Ecuador"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    onPaste={(e) => {
+                      // Permitir pegar texto normalmente
+                      const pastedText = e.clipboardData.getData('text');
+                      if (pastedText) {
+                        setAddress(pastedText);
+                      }
+                    }}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={async () => {
+                      setGettingLocation(true);
+                      setError(null);
+                      try {
+                        const coords = await getCurrentLocation();
+                        setLatitude(coords.latitude);
+                        setLongitude(coords.longitude);
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : "Error al obtener ubicación");
+                      } finally {
+                        setGettingLocation(false);
+                      }
+                    }}
+                    disabled={gettingLocation}
+                  >
+                    <Navigation className="h-4 w-4 mr-2" />
+                    {gettingLocation ? "Obteniendo..." : "Mi ubicación"}
+                  </Button>
+                </div>
+                {(latitude || longitude) && (
+                  <p className="text-xs text-muted-foreground">
+                    Coordenadas: {typeof latitude === 'number' ? latitude.toFixed(6) : latitude}, {typeof longitude === 'number' ? longitude.toFixed(6) : longitude}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Ingresa tu dirección o usa el botón para obtener tu ubicación actual. Esto ayuda a los clientes a encontrarte.
+                </p>
               </div>
             </div>
 

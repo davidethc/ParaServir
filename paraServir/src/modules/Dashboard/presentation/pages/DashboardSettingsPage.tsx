@@ -24,6 +24,7 @@ import { Trash2 } from "lucide-react";
 import { isWorker, isClient } from "@/shared/constants/user-roles.constants";
 import { ROUTES } from "@/shared/constants/routes.constants";
 import { useNavigate } from "react-router-dom";
+import { UpdateLocationForm } from "@/modules/Geolocation/presentation/components/UpdateLocationForm";
 
 export function DashboardSettingsPage() {
   const { user, loading, error, refetch } = useMe();
@@ -110,6 +111,14 @@ export function DashboardSettingsPage() {
               Editar Perfil Personal
             </Button>
           </div>
+        )}
+
+        {/* Geolocalización para trabajadores */}
+        {isWorker(user.role) && (
+          <>
+            <Separator />
+            <UpdateLocationForm />
+          </>
         )}
 
         {/* Perfil profesional para trabajadores */}

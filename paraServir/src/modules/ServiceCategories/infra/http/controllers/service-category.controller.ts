@@ -17,8 +17,8 @@ export class ServiceCategoryController {
         return await this.getServiceCategoriesUseCase.execute();
     }
 
-    async getCategoryDetail(categoryId: string): Promise<CategoryDetailDto> {
-        return await this.getCategoryDetailUseCase.execute(categoryId);
+    async getCategoryDetail(categoryId: string, locationParams?: { address?: string; latitude?: number; longitude?: number; radius?: number }): Promise<CategoryDetailDto> {
+        return await this.getCategoryDetailUseCase.execute(categoryId, locationParams);
     }
 }
 

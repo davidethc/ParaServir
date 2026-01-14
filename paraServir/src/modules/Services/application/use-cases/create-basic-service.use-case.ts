@@ -41,8 +41,8 @@ export class CreateBasicServiceUseCase {
             // Usar HttpClientService para manejar automáticamente el token
             const httpClient = new HttpClientService({ baseUrl: this.apiUrl });
 
-            // El backend espera un array de services
-            const requestBody = {
+            // El backend espera un array de services y ubicación
+            const requestBody: any = {
                 services: [{
                     category_id: dto.category_id,
                     title: dto.title,
@@ -50,6 +50,13 @@ export class CreateBasicServiceUseCase {
                     base_price: basePrice,
                 }]
             };
+
+            // Agregar ubicación si está disponible
+            if (dto.address || (dto.latitude && dto.longitude)) {
+                requestBody.address = dto.address;
+                requestBody.latitude = dto.latitude;
+                requestBody.longitude = dto.longitude;
+            }
 
             // Usar el token pasado como parámetro directamente en los headers
             // Esto asegura que usamos el token correcto, no el de localStorage

@@ -21,7 +21,7 @@ export const getMe = async (req, res) => {
         const { rows } = await pool.query(
             `SELECT u.id, u.email, u.role, u.is_verified, u.created_at,
                     p.first_name, p.last_name, p.cedula, p.phone, 
-                    p.location, p.avatar_url
+                    p.location, p.latitude, p.longitude, p.avatar_url
              FROM users u
              INNER JOIN profiles p ON u.id = p.user_id
              WHERE u.id = $1`,
@@ -37,6 +37,15 @@ export const getMe = async (req, res) => {
 
         // Si es trabajador, incluir información del perfil profesional
         let userData = rows[0];
+        
+        // Convertir latitude y longitude a números si existen
+        if (userData.latitude != null) {
+            userData.latitude = parseFloat(userData.latitude);
+        }
+        if (userData.longitude != null) {
+            userData.longitude = parseFloat(userData.longitude);
+        }
+        
         if (userData.role === 'trabajador') {
             const workerProfile = await pool.query(
                 `SELECT years_experience, certification_url, verification_status, is_active

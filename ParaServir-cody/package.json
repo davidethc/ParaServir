@@ -7,7 +7,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
-    "dev": "node --watch index.js"
+    "dev": "node --watch index.js",
+    "migrate:geolocation": "node scripts/run-migration-geolocation.js",
+    "migrate:notifications": "node scripts/run-migration-notifications.js"
   },
   "author": "Cody",
   "license": "ISC",

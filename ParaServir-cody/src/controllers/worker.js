@@ -1,5 +1,6 @@
 import { pool } from "../db.js";
 import {validateWorkerData} from "../helpers/validateWorker.js";
+import { geocodeAddress, reverseGeocode, calculateDistance } from "../services/geocoding.service.js";
 
 export async function createWorker(client, userId, worker) {
     try {
@@ -74,6 +75,7 @@ export async function list(req, res) {
             SELECT 
                 u.id, u.email, u.role, u.is_verified,
                 p.first_name, p.last_name, p.cedula, p.phone, p.avatar_url, p.location,
+                p.latitude, p.longitude,
                 wp.years_experience, wp.certification_url, wp.verification_status, wp.is_active
             FROM users u
             INNER JOIN profiles p ON u.id = p.user_id
@@ -108,6 +110,7 @@ export async function watch(req, res) {
             SELECT 
                 u.id, u.email, u.role, u.is_verified,
                 p.first_name, p.last_name, p.cedula, p.phone, p.avatar_url, p.location,
+                p.latitude, p.longitude,
                 wp.years_experience, wp.certification_url, wp.verification_status, wp.is_active
             FROM users u
             INNER JOIN profiles p ON u.id = p.user_id
@@ -195,6 +198,52 @@ export async function createServices(req, res) {
     const client = await pool.connect();
     try {
         await client.query("BEGIN");
+
+        // Verificar que el trabajador tenga ubicación configurada
+        const profileCheck = await client.query(
+            `SELECT latitude, longitude, location FROM profiles WHERE user_id = $1`,
+            [userId]
+        );
+
+        if (profileCheck.rowCount === 0 || (!profileCheck.rows[0].latitude || !profileCheck.rows[0].longitude)) {
+            // Intentar obtener ubicación del request o geocodificar
+            const { address, latitude, longitude } = req.body;
+
+            let lat = latitude ? parseFloat(latitude) : null;
+            let lng = longitude ? parseFloat(longitude) : null;
+            let finalAddress = address || profileCheck.rows[0]?.location || null;
+
+            // Si no hay coordenadas pero hay dirección, geocodificar
+            if ((!lat || !lng) && finalAddress) {
+                try {
+                    const geocodeResult = await geocodeAddress(finalAddress);
+                    if (geocodeResult) {
+                        lat = geocodeResult.latitude;
+                        lng = geocodeResult.longitude;
+                        finalAddress = geocodeResult.formatted_address;
+                    }
+                } catch (geoError) {
+                    console.error('Error en geocodificación:', geoError);
+                }
+            }
+
+            // Si aún no hay coordenadas, requerir ubicación
+            if (!lat || !lng) {
+                await client.query("ROLLBACK");
+                return res.status(400).json({
+                    status: "error",
+                    message: "Debes configurar tu ubicación antes de crear servicios. Proporciona 'address' o 'latitude'/'longitude' en el request, o configura tu ubicación en Configuración."
+                });
+            }
+
+            // Actualizar perfil con ubicación
+            await client.query(
+                `UPDATE profiles 
+                 SET location = $1, latitude = $2, longitude = $3, updated_at = NOW()
+                 WHERE user_id = $4`,
+                [finalAddress, lat, lng, userId]
+            );
+        }
 
         // Conteo actual
         const countRes = await client.query(
@@ -504,6 +553,289 @@ export async function deleteService(req, res) {
         return res.status(500).json({
             status: "error",
             message: "Error al eliminar el servicio",
+            error: error.message
+        });
+    }
+}
+
+// ============================================================
+// ENDPOINTS DE GEOLOCALIZACIÓN
+// ============================================================
+
+/**
+ * Actualizar ubicación del trabajador
+ * Permite actualizar la ubicación mediante dirección (geocodificación automática) 
+ * o coordenadas directas
+ * 
+ * POST/PUT /api/workers/location
+ * Body: { address?: string, latitude?: number, longitude?: number }
+ */
+export async function updateLocation(req, res) {
+    const userId = req.user?.id;
+    if (!userId) {
+        return res.status(401).json({ status: "error", message: "No autenticado" });
+    }
+
+    const { address, latitude, longitude } = req.body;
+
+    try {
+        let lat = latitude ? parseFloat(latitude) : null;
+        let lng = longitude ? parseFloat(longitude) : null;
+        let finalAddress = address;
+
+        // Si viene dirección, convertirla a coordenadas automáticamente (GRATIS)
+        if (address && (!lat || !lng)) {
+            const geocodeResult = await geocodeAddress(address);
+            if (!geocodeResult) {
+                return res.status(400).json({
+                    status: "error",
+                    message: "No se pudo encontrar la ubicación. Intenta con una dirección más específica (ej: 'Quito, Ecuador' o 'Loja, Ecuador')."
+                });
+            }
+            lat = geocodeResult.latitude;
+            lng = geocodeResult.longitude;
+            finalAddress = geocodeResult.formatted_address;
+        }
+        // Si vienen coordenadas pero no dirección, obtener dirección automáticamente (GRATIS)
+        else if (lat && lng && !address) {
+            const reverseResult = await reverseGeocode(lat, lng);
+            if (reverseResult) {
+                finalAddress = reverseResult.formatted_address;
+            }
+        }
+
+        if (!lat || !lng) {
+            return res.status(400).json({
+                status: "error",
+                message: "Se requiere 'address' o 'latitude'/'longitude'"
+            });
+        }
+
+        // Validar que las coordenadas sean válidas
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            return res.status(400).json({
+                status: "error",
+                message: "Coordenadas inválidas. Latitud debe estar entre -90 y 90, Longitud entre -180 y 180"
+            });
+        }
+
+        // Guardar en la base de datos
+        const result = await pool.query(
+            `UPDATE profiles 
+             SET location = $1, latitude = $2, longitude = $3, updated_at = NOW()
+             WHERE user_id = $4
+             RETURNING latitude, longitude, location`,
+            [finalAddress || null, lat, lng, userId]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({
+                status: "error",
+                message: "Perfil no encontrado"
+            });
+        }
+
+        return res.status(200).json({
+            status: "success",
+            message: "Ubicación actualizada correctamente",
+            location: {
+                address: result.rows[0].location,
+                latitude: parseFloat(result.rows[0].latitude),
+                longitude: parseFloat(result.rows[0].longitude)
+            }
+        });
+    } catch (error) {
+        return res.status(400).json({
+            status: "error",
+            message: "Error al actualizar ubicación",
+            error: error.message
+        });
+    }
+}
+
+/**
+ * Buscar trabajadores cercanos a una ubicación
+ * Permite buscar trabajadores dentro de un radio específico (en km)
+ * Opcionalmente puede filtrar por categoría
+ * 
+ * GET /api/workers/nearby?latitude=-0.1807&longitude=-78.4678&radius=10&category_id=xxx
+ * Query params:
+ *   - latitude (required): Latitud del punto de búsqueda
+ *   - longitude (required): Longitud del punto de búsqueda
+ *   - radius (optional): Radio de búsqueda en km (default: 10)
+ *   - category_id (optional): Filtrar por categoría de servicio
+ */
+export async function findNearbyWorkers(req, res) {
+    try {
+        const { latitude, longitude, radius = 10, category_id } = req.query;
+
+        if (!latitude || !longitude) {
+            return res.status(400).json({
+                status: "error",
+                message: "Se requieren los parámetros 'latitude' y 'longitude'"
+            });
+        }
+
+        const lat = parseFloat(latitude);
+        const lng = parseFloat(longitude);
+        const radiusKm = parseFloat(radius) || 10;
+
+        // Validar coordenadas
+        if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            return res.status(400).json({
+                status: "error",
+                message: "Coordenadas inválidas"
+            });
+        }
+
+        // Validar radio
+        if (isNaN(radiusKm) || radiusKm <= 0 || radiusKm > 1000) {
+            return res.status(400).json({
+                status: "error",
+                message: "El radio debe ser un número entre 0 y 1000 km"
+            });
+        }
+
+        // Query para encontrar trabajadores cercanos usando fórmula de Haversine
+        // La fórmula calcula la distancia en kilómetros entre dos puntos geográficos
+        let query = `
+            SELECT 
+                u.id, u.email, u.role, u.is_verified,
+                p.first_name, p.last_name, p.cedula, p.phone, 
+                p.avatar_url, p.location, p.latitude, p.longitude,
+                wp.years_experience, wp.certification_url, 
+                wp.verification_status, wp.is_active,
+                (
+                    6371 * acos(
+                        cos(radians($1)) * 
+                        cos(radians(p.latitude)) * 
+                        cos(radians(p.longitude) - radians($2)) + 
+                        sin(radians($1)) * 
+                        sin(radians(p.latitude))
+                    )
+                ) AS distance_km
+            FROM users u
+            INNER JOIN profiles p ON u.id = p.user_id
+            INNER JOIN worker_profiles wp ON u.id = wp.user_id
+            WHERE u.role = 'trabajador'
+                AND wp.is_active = true
+                AND p.latitude IS NOT NULL
+                AND p.longitude IS NOT NULL
+        `;
+
+        const params = [lat, lng];
+        let paramIndex = 3;
+
+        // Filtrar por categoría si se proporciona
+        if (category_id) {
+            query += ` AND EXISTS (
+                SELECT 1 FROM worker_services ws 
+                WHERE ws.worker_id = u.id 
+                AND ws.category_id = $${paramIndex}
+                AND ws.is_available = true
+            )`;
+            params.push(category_id);
+            paramIndex++;
+        }
+
+        // Filtrar por distancia usando HAVING
+        query += `
+            HAVING (
+                6371 * acos(
+                    cos(radians($1)) * 
+                    cos(radians(p.latitude)) * 
+                    cos(radians(p.longitude) - radians($2)) + 
+                    sin(radians($1)) * 
+                    sin(radians(p.latitude))
+                )
+            ) <= $${paramIndex}
+            ORDER BY distance_km ASC
+            LIMIT 50
+        `;
+        params.push(radiusKm);
+
+        const { rows } = await pool.query(query, params);
+
+        // Formatear respuesta
+        const workers = rows.map(row => ({
+            id: row.id,
+            email: row.email,
+            role: row.role,
+            is_verified: row.is_verified,
+            first_name: row.first_name,
+            last_name: row.last_name,
+            cedula: row.cedula,
+            phone: row.phone,
+            avatar_url: row.avatar_url,
+            location: row.location,
+            latitude: row.latitude ? parseFloat(row.latitude) : null,
+            longitude: row.longitude ? parseFloat(row.longitude) : null,
+            years_experience: row.years_experience,
+            certification_url: row.certification_url,
+            verification_status: row.verification_status,
+            is_active: row.is_active,
+            distance_km: parseFloat(row.distance_km).toFixed(2)
+        }));
+
+        return res.status(200).json({
+            status: "success",
+            search_location: {
+                latitude: lat,
+                longitude: lng,
+                radius_km: radiusKm
+            },
+            workers: workers,
+            count: workers.length
+        });
+    } catch (error) {
+        console.error('Error al buscar trabajadores cercanos:', error);
+        return res.status(500).json({
+            status: "error",
+            message: "Error al buscar trabajadores cercanos",
+            error: error.message
+        });
+    }
+}
+
+/**
+ * Buscar trabajadores por categoría y ubicación (texto)
+ * Permite buscar trabajadores por categoría y ubicación textual
+ * 
+ * GET /api/workers/search?category_id=xxx&location=Quito&radius=10
+ */
+export async function searchWorkersByLocation(req, res) {
+    try {
+        const { category_id, location, radius = 10 } = req.query;
+
+        if (!location) {
+            return res.status(400).json({
+                status: "error",
+                message: "Se requiere el parámetro 'location'"
+            });
+        }
+
+        // Geocodificar la ubicación proporcionada
+        const geocodeResult = await geocodeAddress(location);
+        if (!geocodeResult) {
+            return res.status(400).json({
+                status: "error",
+                message: "No se pudo encontrar la ubicación especificada"
+            });
+        }
+
+        // Usar el endpoint de búsqueda cercana con las coordenadas obtenidas
+        req.query.latitude = geocodeResult.latitude.toString();
+        req.query.longitude = geocodeResult.longitude.toString();
+        req.query.radius = radius;
+        if (category_id) {
+            req.query.category_id = category_id;
+        }
+
+        return await findNearbyWorkers(req, res);
+    } catch (error) {
+        return res.status(500).json({
+            status: "error",
+            message: "Error al buscar trabajadores",
             error: error.message
         });
     }

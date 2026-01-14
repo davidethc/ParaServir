@@ -18,6 +18,7 @@ import { AuthController } from "@/modules/Auth/infra/http/controllers/auth.contr
 import { useDispatch } from "react-redux";
 import { login } from "@/Store/slices/authSlice";
 import { AuthFooter } from "@/shared/components/layout/AuthFooter";
+import { GoogleAuthButton } from "./components/GoogleAuthButton";
 
 export function RegisterForm() {
   const [email, setEmail] = useState("");
@@ -264,8 +265,15 @@ export function RegisterForm() {
                   type="text"
                   value={location}
                   onChange={e => setLocation(e.target.value)}
+                  onPaste={(e) => {
+                    // Permitir pegar texto normalmente
+                    const pastedText = e.clipboardData.getData('text');
+                    if (pastedText) {
+                      setLocation(pastedText);
+                    }
+                  }}
                   placeholder="Quito, Guayaquil, etc."
-                    className="mt-1"
+                  className="mt-1"
                   required
                 />
               </div>
@@ -362,10 +370,7 @@ export function RegisterForm() {
                 <div className="flex-1 h-px bg-border" />
               </div>
 
-              <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2">
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="h-5 w-5" />
-                Google
-              </Button>
+              <GoogleAuthButton />
 
               <div className="text-center text-sm mt-2 text-text-secondary">
                 ¿Ya tienes una cuenta?{' '}

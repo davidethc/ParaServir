@@ -1,4 +1,5 @@
 import { pool } from "../db.js";
+import { createNotification } from "./notification.js";
 
 // Crear una solicitud de servicio
 export const createRequest = async (req, res) => {
@@ -349,6 +350,44 @@ export const updateRequest = async (req, res) => {
         `;
 
         const result = await client.query(updateQuery, values);
+        const updatedRequest = result.rows[0];
+
+        // Crear notificaciones según el cambio de estado
+        if (status && status !== request.status) {
+            try {
+                if (status === 'accepted' && request.client_id) {
+                    // Notificar al cliente que su solicitud fue aceptada
+                    await createNotification(
+                        request.client_id,
+                        'request_accepted',
+                        'Solicitud Aceptada',
+                        `Tu solicitud de servicio ha sido aceptada por un trabajador.`,
+                        id
+                    );
+                } else if (status === 'completed' && request.client_id) {
+                    // Notificar al cliente que el servicio fue completado
+                    await createNotification(
+                        request.client_id,
+                        'request_completed',
+                        'Servicio Completado',
+                        `El servicio ha sido marcado como completado. Puedes dejar una reseña.`,
+                        id
+                    );
+                } else if (status === 'in_progress' && request.client_id) {
+                    // Notificar al cliente que el trabajo comenzó
+                    await createNotification(
+                        request.client_id,
+                        'request_in_progress',
+                        'Trabajo en Progreso',
+                        `El trabajador ha comenzado a realizar el servicio.`,
+                        id
+                    );
+                }
+            } catch (notifError) {
+                // No fallar la actualización si la notificación falla
+                console.error('Error al crear notificación:', notifError);
+            }
+        }
 
         await client.query("COMMIT");
 

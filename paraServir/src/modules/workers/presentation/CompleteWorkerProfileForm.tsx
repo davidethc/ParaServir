@@ -21,6 +21,7 @@ import { useCategories } from "@/shared/hooks/useCategories";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useMe } from "@/shared/hooks/useMe";
 import { LoadingState } from "@/shared/components/feedback/LoadingState";
+import { FileUpload } from "@/modules/Upload/presentation/components/FileUpload";
 
 interface ServiceForm {
   category_id: string;
@@ -265,9 +266,19 @@ export function CompleteWorkerProfileForm() {
               </div>
 
               <div>
-                <Label htmlFor="certificationUrl" className="font-medium text-foreground">
-                  URL de Certificación (Opcional)
+                <Label className="font-medium text-foreground mb-2 block">
+                  Certificación (Opcional)
                 </Label>
+                <FileUpload
+                  type="certification"
+                  currentFileUrl={certificationUrl || null}
+                  onSuccess={(fileUrl) => {
+                    setCertificationUrl(fileUrl);
+                  }}
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  O ingresa una URL manualmente:
+                </p>
                 <Input
                   id="certificationUrl"
                   type="url"

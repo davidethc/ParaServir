@@ -12,6 +12,8 @@ export interface UserDto {
   cedula: string;
   phone: string;
   location: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   avatar_url: string | null;
   worker_profile?: {
     years_experience: number | null;

@@ -196,6 +196,15 @@ export function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
                 {...register("location")}
                 placeholder="Ciudad, País"
                 disabled={loading}
+                onPaste={(e) => {
+                  // Permitir pegar texto normalmente
+                  const pastedText = e.clipboardData.getData('text');
+                  if (pastedText) {
+                    // Actualizar el valor del formulario con el texto pegado
+                    const { onChange } = register("location");
+                    onChange({ target: { value: pastedText } });
+                  }
+                }}
               />
               {errors.location && (
                 <p className="text-sm text-destructive">{errors.location.message}</p>

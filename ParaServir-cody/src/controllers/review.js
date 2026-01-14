@@ -1,4 +1,5 @@
 import { pool } from "../db.js";
+import { createNotification } from "./notification.js";
 
 // Crear una reseña
 export const createReview = async (req, res) => {
@@ -81,6 +82,21 @@ export const createReview = async (req, res) => {
              RETURNING *`,
             [request_id, clientId, request.worker_id, rating, comment || null]
         );
+
+        // Notificar al trabajador que recibió una reseña
+        if (request.worker_id) {
+            try {
+                await createNotification(
+                    request.worker_id,
+                    'review_received',
+                    'Nueva Reseña',
+                    `Has recibido una nueva reseña con calificación de ${rating} estrellas.`,
+                    result.rows[0].id
+                );
+            } catch (notifError) {
+                console.error('Error al crear notificación de reseña:', notifError);
+            }
+        }
 
         await client.query("COMMIT");
 

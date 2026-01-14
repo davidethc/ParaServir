@@ -9,6 +9,7 @@ import { Alert } from "@/shared/components/ui/alert";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { AuthController } from "@/modules/Auth/infra/http/controllers/auth.controller";
 import { AuthFooter } from "@/shared/components/layout/AuthFooter";
+import { GoogleAuthButton } from "./components/GoogleAuthButton";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -135,10 +136,7 @@ export function LoginForm() {
                 <span className="text-muted-foreground text-xs">O ingresa con</span>
                 <div className="flex-1 h-px bg-border" />
               </div>
-              <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2">
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="h-5 w-5" />
-                Google
-              </Button>
+              <GoogleAuthButton />
               <div className="text-center text-sm mt-2 text-text-secondary">
                 ¿No tienes cuenta?{' '}
                 <Link to={ROUTES.PUBLIC.REGISTER} className="text-primary hover:text-primary-hover hover:underline font-medium">Regístrate</Link>

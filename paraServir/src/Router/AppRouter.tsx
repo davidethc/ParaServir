@@ -32,6 +32,7 @@ import { ROUTES } from "@/shared/constants/routes.constants";
 import { DashboardServiceEditPage } from "@/modules/Dashboard/presentation/pages/DashboardServiceEditPage";
 import { DashboardServicesPage } from "@/modules/Dashboard/presentation/pages/DashboardServicesPage";
 import { DashboardRequestDetailPage } from "@/modules/Dashboard/presentation/pages/DashboardRequestDetailPage";
+import { DashboardAdminPage } from "@/modules/Dashboard/presentation/pages/DashboardAdminPage";
 import { WorkerProfilePage } from "@/modules/workers/presentation/pages/WorkerProfilePage";
 import { WorkersListPage } from "@/modules/workers/presentation/pages/WorkersListPage";
 
@@ -96,6 +97,14 @@ export function AppRouter() {
           <Route path="chats" element={<DashboardChatsPage />} />
           <Route path="help" element={<DashboardHelpPage />} />
           <Route path="settings" element={<DashboardSettingsPage />} />
+          <Route
+            path="admin"
+            element={
+              <RoleProtectedRoute requiredRole="admin">
+                <DashboardAdminPage />
+              </RoleProtectedRoute>
+            }
+          />
           <Route
             path="services"
             element={

@@ -32,6 +32,7 @@ export const ROUTES = {
     SERVICE_EDIT: (id: string) => `/dashboard/services/${id}/edit`,
     HELP: "/dashboard/help",
     SETTINGS: "/dashboard/settings",
+    ADMIN: "/dashboard/admin",
     SEARCH: (query?: string) => {
       const base = "/dashboard/search";
       return query ? `${base}?q=${encodeURIComponent(query)}` : base;

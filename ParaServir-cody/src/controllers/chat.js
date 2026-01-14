@@ -1,4 +1,5 @@
 import { pool } from "../db.js";
+import { createNotification } from "./notification.js";
 
 /**
  * Obtener todas las conversaciones del usuario autenticado
@@ -243,6 +244,33 @@ export const sendMessage = async (req, res) => {
              WHERE id = $1`,
             [requestId]
         );
+
+        // Determinar el receptor del mensaje
+        const receiverId = userId === request.client_id ? request.worker_id : request.client_id;
+        
+        // Obtener nombre del remitente para la notificación
+        const senderProfile = await client.query(
+            `SELECT first_name, last_name FROM profiles WHERE user_id = $1`,
+            [userId]
+        );
+        const senderName = senderProfile.rows[0] 
+            ? `${senderProfile.rows[0].first_name} ${senderProfile.rows[0].last_name}`
+            : 'Alguien';
+
+        // Crear notificación para el receptor
+        if (receiverId) {
+            try {
+                await createNotification(
+                    receiverId,
+                    'message',
+                    'Nuevo Mensaje',
+                    `${senderName} te envió un mensaje: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
+                    messageResult.rows[0].id
+                );
+            } catch (notifError) {
+                console.error('Error al crear notificación de mensaje:', notifError);
+            }
+        }
 
         await client.query("COMMIT");
 

@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ServiceCategoryController } from "@/modules/ServiceCategories/infra/http/controllers/service-category.controller";
 import type { CategoryDetailDto } from "@/modules/ServiceCategories/application/use-cases/get-category-detail.use-case";
+import { LocationSearch } from "../components/LocationSearch";
+import { Card } from "@/shared/components/ui/card";
+import { MapPin } from "lucide-react";
+import { WorkersMap } from "@/modules/Geolocation/presentation/components/WorkersMap";
 
 // Componentes compartidos unificados
 import { PageContainer } from "@/shared/components/layout/PageContainer";
@@ -19,6 +23,7 @@ export function DashboardCategoryDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [categoryDetail, setCategoryDetail] = useState<CategoryDetailDto | null>(null);
+  const [locationParams, setLocationParams] = useState<{ address?: string; latitude?: number; longitude?: number; radius?: number } | undefined>();
   const categoryController = new ServiceCategoryController();
 
   useEffect(() => {
@@ -32,7 +37,7 @@ export function DashboardCategoryDetailPage() {
       try {
         setLoading(true);
         setError(null);
-        const detail = await categoryController.getCategoryDetail(id);
+        const detail = await categoryController.getCategoryDetail(id, locationParams);
         setCategoryDetail(detail);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error al cargar la categoría";
@@ -44,7 +49,7 @@ export function DashboardCategoryDetailPage() {
 
     loadCategoryDetail();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, locationParams]);
 
   if (loading) {
     return (
@@ -83,7 +88,7 @@ export function DashboardCategoryDetailPage() {
     );
   }
 
-  const { category, workers = [], services = [] } = categoryDetail;
+  const { category, workers = [], services = [], search_location } = categoryDetail;
 
   const goToRequest = (opts: { serviceId?: string; workerId?: string }) => {
     try {
@@ -131,6 +136,41 @@ export function DashboardCategoryDetailPage() {
         title={category.name || "Categoría sin nombre"}
         description={category.description || "Sin descripción disponible"}
       />
+
+      {/* Búsqueda por ubicación */}
+      <Card className="p-4 mb-6">
+        <LocationSearch
+          onLocationChange={(location) => {
+            setLocationParams({
+              address: location.address,
+              latitude: location.latitude,
+              longitude: location.longitude,
+              radius: 50, // Radio por defecto de 50km
+            });
+          }}
+          initialLocation={locationParams}
+        />
+      </Card>
+
+      {/* Mapa de trabajadores */}
+      {workers.length > 0 && (
+        <div className="mb-6">
+          <WorkersMap
+            workers={workers.map(w => ({
+              worker_id: w.worker_id,
+              first_name: w.first_name || '',
+              last_name: w.last_name || '',
+              location: w.location,
+              latitude: w.latitude || 0,
+              longitude: w.longitude || 0,
+              distance_km: w.distance_km,
+            }))}
+            centerLatitude={locationParams?.latitude}
+            centerLongitude={locationParams?.longitude}
+            radius={locationParams?.radius || 50}
+          />
+        </div>
+      )}
       
       {/* Estadísticas mejoradas */}
       <div className="flex flex-wrap items-center gap-4 mb-8 p-4 bg-secondary/50 rounded-xl border border-border">
@@ -147,6 +187,17 @@ export function DashboardCategoryDetailPage() {
             {category.services_count ?? 0} servicios disponibles
           </span>
         </div>
+        {search_location && (
+          <>
+            <div className="h-4 w-px bg-border" />
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-foreground">
+                Buscando en un radio de {search_location.radius_km}km
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Servicios con grid mejorado */}
@@ -168,6 +219,9 @@ export function DashboardCategoryDetailPage() {
               const worker = workers.find((w) => w.worker_id === service.worker_id);
               const workerPhone = worker?.phone;
               
+              // Buscar distancia del trabajador si está disponible
+              const workerDistance = worker?.distance_km;
+              
               return (
                 <ServiceCard
                   key={service.id || `service-${Math.random()}`}
@@ -180,6 +234,8 @@ export function DashboardCategoryDetailPage() {
                   workerPhone={workerPhone}
                   workerId={service.worker_id}
                   categoryName={category.name}
+                  distanceKm={workerDistance}
+                  workerLocation={worker?.location}
                   onClick={() => goToRequest({ serviceId: service.id, workerId: service.worker_id })}
                 />
               );

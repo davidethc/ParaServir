@@ -6,6 +6,9 @@ export interface CreateBasicServiceDto {
   price_type: 'hourly' | 'per_job';
   price_range?: string; // Para hourly: "1-3", "3-6", "6-9", "9+"
   years_experience: string; // "1-10", "11-50", "51-100", "101-200", "201-500", "500+"
+  address?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface CreateBasicServiceResponseDto {

@@ -16,6 +16,9 @@ export interface CategoryDetailDto {
     last_name: string;
     phone?: string;
     location?: string;
+    latitude?: number;
+    longitude?: number;
+    distance_km?: number;
     avatar_url?: string;
     years_experience?: number;
     verification_status: string;
@@ -24,6 +27,11 @@ export interface CategoryDetailDto {
     min_price?: number;
     max_price?: number;
   }>;
+  search_location?: {
+    latitude: number;
+    longitude: number;
+    radius_km: number;
+  } | null;
   services: Array<{
     id: string;
     title: string;
@@ -45,7 +53,7 @@ export class GetCategoryDetailUseCase {
     this.httpClient = new HttpClientService({ baseUrl });
   }
 
-  async execute(categoryId: string): Promise<CategoryDetailDto> {
+  async execute(categoryId: string, locationParams?: { address?: string; latitude?: number; longitude?: number; radius?: number }): Promise<CategoryDetailDto> {
     // Modo mock para desarrollo (solo si USE_MOCK_DATA = true)
     if (USE_MOCK_DATA) {
       const { simulateNetworkDelay } = await import("@/shared/Utils/mockData");
@@ -67,7 +75,19 @@ export class GetCategoryDetailUseCase {
 
     try {
       // Llamada al backend real: GET /categories/:id
-      const endpoint = API_CONFIG.endpoints.serviceCategories.getById(categoryId);
+      let endpoint = API_CONFIG.endpoints.serviceCategories.getById(categoryId);
+      
+      // Agregar parámetros de ubicación si están disponibles
+      const params = new URLSearchParams();
+      if (locationParams?.address) params.append('location', locationParams.address);
+      if (locationParams?.latitude) params.append('latitude', locationParams.latitude.toString());
+      if (locationParams?.longitude) params.append('longitude', locationParams.longitude.toString());
+      if (locationParams?.radius) params.append('radius', locationParams.radius.toString());
+      
+      if (params.toString()) {
+        endpoint += `?${params.toString()}`;
+      }
+      
       const backendResponse = await this.httpClient.get<{
         status?: string;
         category?: {
@@ -84,6 +104,9 @@ export class GetCategoryDetailUseCase {
           last_name: string;
           phone?: string;
           location?: string;
+          latitude?: number;
+          longitude?: number;
+          distance_km?: number;
           avatar_url?: string;
           years_experience?: number;
           verification_status: string;
@@ -101,6 +124,11 @@ export class GetCategoryDetailUseCase {
           worker_id: string;
           worker_name: string;
         }>;
+        search_location?: {
+          latitude: number;
+          longitude: number;
+          radius_km: number;
+        } | null;
       }>(endpoint);
 
       // El backend devuelve: { status: "success", category: {...}, workers: [...], services: [...] }
@@ -132,6 +160,9 @@ export class GetCategoryDetailUseCase {
           last_name: worker.last_name || "",
           phone: worker.phone,
           location: worker.location,
+          latitude: worker.latitude != null ? Number(worker.latitude) : undefined,
+          longitude: worker.longitude != null ? Number(worker.longitude) : undefined,
+          distance_km: worker.distance_km != null ? Number(worker.distance_km) : undefined,
           avatar_url: worker.avatar_url,
           years_experience: worker.years_experience ?? 0,
           verification_status: worker.verification_status || "pending",
@@ -140,6 +171,7 @@ export class GetCategoryDetailUseCase {
           min_price: worker.min_price != null ? Number(worker.min_price) : undefined,
           max_price: worker.max_price != null ? Number(worker.max_price) : undefined,
         })),
+        search_location: backendResponse.search_location || null,
         services: (backendResponse.services || []).map((service: any) => ({
           id: service.id || "",
           title: service.title || "Servicio sin título",

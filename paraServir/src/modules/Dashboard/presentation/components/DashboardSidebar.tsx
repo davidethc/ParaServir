@@ -26,6 +26,7 @@ import { cn } from "@/shared/lib/utils";
 import { logout } from "@/Store/slices/authSlice";
 import type { RootState } from "@/Store";
 import { getUserAvatar } from "@/shared/utils/avatar-utils";
+import { NotificationBell } from "@/modules/Notifications/presentation/components/NotificationBell";
 
 interface NavItem {
   label: string;
@@ -122,6 +123,7 @@ export function DashboardSidebar() {
               Bienvenido {getUserDisplayName()}
             </p>
           </div>
+          <NotificationBell />
         </div>
 
         {/* Botón Dashboard */}
