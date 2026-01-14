@@ -33,6 +33,7 @@ import { DashboardServicesPage } from "@/modules/Dashboard/presentation/pages/Da
 import { DashboardRequestDetailPage } from "@/modules/Dashboard/presentation/pages/DashboardRequestDetailPage";
 import { WorkerProfilePage } from "@/modules/workers/presentation/pages/WorkerProfilePage";
 import { WorkersListPage } from "@/modules/workers/presentation/pages/WorkersListPage";
+import { DashboardRequestsPage } from "@/modules/Dashboard/presentation/pages/DashboardRequestsPage";
 
 export function AppRouter() {
   return (

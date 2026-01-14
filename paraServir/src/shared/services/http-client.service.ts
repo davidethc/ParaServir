@@ -1,11 +1,20 @@
-import axios, { type AxiosInstance } from 'axios';
+import axios from 'axios';
+import type {
+  AxiosInstance,
+  AxiosRequestConfig,
+} from 'axios';
 
 /**
- * Servicio HTTP centralizado para todas las peticiones al backend
- * - Agrega token automáticamente
- * - Maneja errores de forma centralizada
- * - Transforma respuestas
+ * Servicio HTTP centralizado
+ * - Manejo automático de token
+ * - Manejo centralizado de errores
+ * - Tipado fuerte
  */
+
+interface ApiErrorResponse {
+  message?: string;
+  error?: string;
+}
 
 export interface HttpClientConfig {
   baseUrl: string;
@@ -26,26 +35,26 @@ export class HttpClientService {
   }
 
   /**
-   * Obtiene el token de autenticación desde localStorage
-   * Nota: Usamos localStorage directamente aquí para evitar dependencias circulares
-   * El AuthStorageService se usa en otros lugares donde no hay riesgo de circularidad
+   * Obtiene el token desde localStorage
    */
   private getAuthToken(): string | null {
     return localStorage.getItem('token');
   }
 
   /**
-   * Construye los headers con el token si existe
-   * Si se pasa Authorization en customHeaders, tiene prioridad sobre el token de localStorage
+   * Construye headers con Authorization si existe
    */
-  private buildHeaders(customHeaders?: Record<string, string>): Record<string, string> {
-    const headers = { ...customHeaders };
+  private buildHeaders(
+    customHeaders?: Record<string, string>
+  ): Record<string, string> {
+    const headers: Record<string, string> = {
+      ...customHeaders,
+    };
 
-    // Si no se pasó Authorization en customHeaders, usar el token de localStorage
-    if (!headers['Authorization']) {
+    if (!headers.Authorization) {
       const token = this.getAuthToken();
       if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+        headers.Authorization = `Bearer ${token}`;
       }
     }
 
@@ -53,33 +62,34 @@ export class HttpClientService {
   }
 
   /**
-   * Maneja errores de respuesta
+   * Manejo centralizado de errores Axios
    */
   private handleError(error: unknown): never {
+    console.error(error);
+
     let errorMessage = 'Error en la petición';
-    
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
-      
-      // Mensajes más específicos según el código de estado
-      if (response.status === 401) {
-        errorMessage = errorData.message || 'Token inválido o sesión expirada. Por favor, inicia sesión nuevamente.';
-      } else if (response.status === 403) {
-        errorMessage = errorData.message || 'No tienes permisos para realizar esta acción.';
-      } else if (response.status === 404) {
-        errorMessage = errorData.message || 'Recurso no encontrado.';
-      } else if (response.status === 400) {
-        errorMessage = errorData.message || 'Datos inválidos. Verifica la información ingresada.';
-      }
-    } catch {
-      // Si no se puede parsear JSON, usar el mensaje por defecto
-      if (response.status === 401) {
-        errorMessage = 'Token inválido o sesión expirada. Por favor, inicia sesión nuevamente.';
-      } else if (response.status === 403) {
-        errorMessage = 'No tienes permisos para realizar esta acción.';
+
+    if (axios.isAxiosError<ApiErrorResponse>(error)) {
+      const status = error.response?.status;
+      const data = error.response?.data;
+
+      if (status === 401) {
+        errorMessage =
+          data?.message ||
+          'Token inválido o sesión expirada. Inicia sesión nuevamente.';
+      } else if (status === 403) {
+        errorMessage =
+          data?.message || 'No tienes permisos para realizar esta acción.';
+      } else if (status === 404) {
+        errorMessage = data?.message || 'Recurso no encontrado.';
+      } else if (status === 400) {
+        errorMessage =
+          data?.message || 'Datos inválidos. Verifica la información enviada.';
       } else {
-        errorMessage = `Error ${response.status}: ${response.statusText}`;
+        errorMessage =
+          data?.message ||
+          error.message ||
+          'Error inesperado en el servidor';
       }
     }
 
@@ -87,31 +97,40 @@ export class HttpClientService {
   }
 
   /**
-   * Realiza una petición GET
-   * @param endpoint - Ruta del endpoint
-   * @param headers - Headers adicionales
-   * @param silent404 - Si es true, no lanza error para 404 (útil para recursos opcionales)
+   * GET
    */
-  async get<T>(endpoint: string, headers?: Record<string, string>, silent404: boolean = false): Promise<T | null> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: this.buildHeaders(headers),
-    });
+  async get<T>(
+    endpoint: string,
+    headers?: Record<string, string>,
+    silent404 = false
+  ): Promise<T | null> {
+    try {
+      const config: AxiosRequestConfig = {
+        headers: this.buildHeaders(headers),
+      };
 
-    if (!response.ok) {
-      // Si es 404 y silent404 está activado, retornar null en lugar de lanzar error
-      if (response.status === 404 && silent404) {
+      const response = await this.axiosInstance.get<T>(endpoint, config);
+      return response.data;
+    } catch (error) {
+      if (
+        silent404 &&
+        axios.isAxiosError(error) &&
+        error.response?.status === 404
+      ) {
         return null;
       }
-      await this.handleError(response);
+      this.handleError(error);
     }
   }
 
   /**
-   * Realiza una petición POST
+   * POST
    */
-  async post<T>(endpoint: string, data?: unknown, headers?: Record<string, string>): Promise<T> {
+  async post<T>(
+    endpoint: string,
+    data?: unknown,
+    headers?: Record<string, string>
+  ): Promise<T> {
     try {
       const response = await this.axiosInstance.post<T>(endpoint, data, {
         headers: this.buildHeaders(headers),
@@ -123,9 +142,13 @@ export class HttpClientService {
   }
 
   /**
-   * Realiza una petición PUT
+   * PUT
    */
-  async put<T>(endpoint: string, data?: unknown, headers?: Record<string, string>): Promise<T> {
+  async put<T>(
+    endpoint: string,
+    data?: unknown,
+    headers?: Record<string, string>
+  ): Promise<T> {
     try {
       const response = await this.axiosInstance.put<T>(endpoint, data, {
         headers: this.buildHeaders(headers),
@@ -137,9 +160,12 @@ export class HttpClientService {
   }
 
   /**
-   * Realiza una petición DELETE
+   * DELETE
    */
-  async delete<T>(endpoint: string, headers?: Record<string, string>): Promise<T> {
+  async delete<T>(
+    endpoint: string,
+    headers?: Record<string, string>
+  ): Promise<T> {
     try {
       const response = await this.axiosInstance.delete<T>(endpoint, {
         headers: this.buildHeaders(headers),
