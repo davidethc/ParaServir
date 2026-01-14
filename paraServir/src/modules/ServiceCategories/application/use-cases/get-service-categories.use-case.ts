@@ -21,7 +21,7 @@ export class GetServiceCategoriesUseCase {
         }
 
         try {
-            // Llamada al backend real
+            // Llamada al backend real con conteo de trabajadores y servicios
             const backendResponse = await this.httpClient.get<{
                 status?: string;
                 rows?: Array<{
@@ -29,8 +29,11 @@ export class GetServiceCategoriesUseCase {
                     name: string;
                     description?: string;
                     icon?: string;
+                    workers_count?: number;
+                    services_count?: number;
+                    image_url?: string;
                 }>;
-            }>(API_CONFIG.endpoints.serviceCategories.getAll);
+            }>(`${API_CONFIG.endpoints.serviceCategories.getAll}?include_workers=true`);
 
             // El backend devuelve: { status: "success", rows: [...] }
             const categories = backendResponse.rows || [];
@@ -41,7 +44,10 @@ export class GetServiceCategoriesUseCase {
                 name: cat.name,
                 description: cat.description || undefined,
                 icon: cat.icon || undefined,
-                // jobCount no viene del backend, se puede calcular después si es necesario
+                workers_count: cat.workers_count,
+                services_count: cat.services_count,
+                image_url: cat.image_url,
+                imageUrl: cat.image_url, // Alias para compatibilidad
             }));
         } catch (error) {
             // Manejar errores específicos

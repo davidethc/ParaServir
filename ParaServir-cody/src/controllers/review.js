@@ -150,10 +150,12 @@ export const getRequestReview = async (req, res) => {
                     u.email as client_email,
                     p.first_name as client_first_name,
                     p.last_name as client_last_name,
-                    p.avatar_url as client_avatar
+                    p.avatar_url as client_avatar,
+                    sr.description as request_description
              FROM reviews r
              INNER JOIN users u ON r.client_id = u.id
              INNER JOIN profiles p ON u.id = p.user_id
+             INNER JOIN service_requests sr ON r.request_id = sr.id
              WHERE r.request_id = $1`,
             [requestId]
         );
@@ -173,6 +175,54 @@ export const getRequestReview = async (req, res) => {
         return res.status(500).json({
             status: "error",
             message: "Error al obtener la reseña",
+            error: error.message
+        });
+    }
+};
+
+// Obtener reseñas creadas por un cliente
+export const getClientReviews = async (req, res) => {
+    const clientId = req.user?.id;
+    if (!clientId) {
+        return res.status(401).json({ status: "error", message: "No autenticado" });
+    }
+
+    try {
+        const { rows } = await pool.query(
+            `SELECT r.*,
+                    sr.description as request_description,
+                    ws.title as service_title,
+                    sc.name as category_name,
+                    w.email as worker_email,
+                    wp.first_name as worker_first_name,
+                    wp.last_name as worker_last_name,
+                    wp.avatar_url as worker_avatar
+             FROM reviews r
+             INNER JOIN service_requests sr ON r.request_id = sr.id
+             INNER JOIN users w ON r.worker_id = w.id
+             LEFT JOIN profiles wp ON w.id = wp.user_id
+             LEFT JOIN worker_services ws ON sr.service_id = ws.id
+             LEFT JOIN service_categories sc ON sr.category_id = sc.id
+             WHERE r.client_id = $1
+             ORDER BY r.created_at DESC`,
+            [clientId]
+        );
+
+        // Calcular promedio de rating dado por el cliente
+        const avgRating = rows.length > 0
+            ? rows.reduce((sum, r) => sum + r.rating, 0) / rows.length
+            : 0;
+
+        return res.status(200).json({
+            status: "success",
+            reviews: rows,
+            average_rating: parseFloat(avgRating.toFixed(2)),
+            total_reviews: rows.length
+        });
+    } catch (error) {
+        return res.status(500).json({
+            status: "error",
+            message: "Error al obtener las reseñas",
             error: error.message
         });
     }

@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { ROUTES } from "@/shared/constants/routes.constants";
-import { AuthStorageService } from "@/shared/services/auth-storage.service";
 import { Input } from "@/shared/components/ui/input";
 import { Select } from "@/shared/components/ui/select";
 import { Button } from "@/shared/components/ui/button";
@@ -17,60 +16,67 @@ import {
   SelectItem
 } from "@/shared/components/ui/select";
 import { ServiceController } from "@/modules/Services/infra/http/controllers/service.controller";
-import { ServiceCategoryController } from "@/modules/ServiceCategories/infra/http/controllers/service-category.controller";
-import type { ServiceCategoryDto } from "@/modules/ServiceCategories/application/dto/service-category.dto";
+import type { WorkerServiceDto } from "../application/dto/worker-service.dto";
+import type { UpdateServiceDto } from "../application/dto/update-service.dto";
+import { useCategories } from "@/shared/hooks/useCategories";
+import { useAuth } from "@/shared/hooks/useAuth";
+import { isWorker } from "@/shared/constants/user-roles.constants";
 
-export function CreateBasicServiceForm() {
-  const location = useLocation();
+type FormMode = "create" | "edit";
+
+interface CreateBasicServiceFormProps {
+  mode?: FormMode;
+  serviceId?: string;
+  initialService?: WorkerServiceDto;
+}
+
+export function CreateBasicServiceForm({
+  mode = "create",
+  serviceId,
+  initialService,
+}: CreateBasicServiceFormProps) {
   const navigate = useNavigate();
-  
-  // Obtener userId y token usando servicio centralizado
-  const userId = location.state?.userId || AuthStorageService.getUserId() || "";
-  const token = location.state?.token || AuthStorageService.getToken() || "";
+  const location = useLocation();
+  const params = useParams<{ id?: string }>();
+  const { getUserId, getToken, user } = useAuth();
+  const { categories, loading: loadingCategories } = useCategories();
 
-  const [serviceName, setServiceName] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [description, setDescription] = useState("");
+  const [serviceName, setServiceName] = useState(initialService?.title || "");
+  const [categoryId, setCategoryId] = useState(initialService?.category_id || "");
+  const [description, setDescription] = useState(initialService?.description || "");
   const [priceType, setPriceType] = useState<"hourly" | "per_job">("hourly");
   const [priceRange, setPriceRange] = useState("");
   const [yearsExperience, setYearsExperience] = useState("");
-  const [categories, setCategories] = useState<ServiceCategoryDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadingCategories, setLoadingCategories] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const serviceController = new ServiceController();
+  const effectiveServiceId = serviceId || params.id;
+  const serviceController = useMemo(() => new ServiceController(), []);
 
   useEffect(() => {
-    const finalUserId = userId || location.state?.userId || AuthStorageService.getUserId() || "";
-    const finalToken = token || location.state?.token || AuthStorageService.getToken() || "";
+    const userId = getUserId();
+    const token = getToken();
 
-    if (!finalUserId || !finalToken) {
-      console.error("Missing userId or token:", { finalUserId, finalToken });
+    if (!userId || !token) {
       navigate(ROUTES.PUBLIC.REGISTER, { replace: true });
       return;
     }
 
-    // Cargar categorías
-    const categoryController = new ServiceCategoryController();
-    const loadCategories = async () => {
-      try {
-        const cats = await categoryController.getAllCategories();
-        setCategories(cats);
-      } catch (err) {
-        console.error("Error loading categories:", err);
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError("Error al cargar categorías. Por favor verifica que el backend esté ejecutándose.");
-        }
-      } finally {
-        setLoadingCategories(false);
-      }
-    };
+    // Autorrellenar categoría si viene initialService (solo una vez)
+    if (!categoryId && initialService?.category_id) {
+      setCategoryId(initialService.category_id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    loadCategories();
-  }, [userId, token, location.state, navigate]);
+  // Si venimos en modo edición y tenemos initialService, setear campos
+  useEffect(() => {
+    if (mode === "edit" && initialService) {
+      setServiceName(initialService.title || "");
+      setCategoryId(initialService.category_id || "");
+      setDescription(initialService.description || "");
+    }
+  }, [mode, initialService]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,6 +98,7 @@ export function CreateBasicServiceForm() {
       return;
     }
 
+    // Validar precio: si es por hora, debe tener rango; si es por obra, no requiere rango
     if (priceType === "hourly" && !priceRange) {
       setError("Debes seleccionar un rango de precio por hora o seleccionar precio por obra");
       return;
@@ -105,27 +112,19 @@ export function CreateBasicServiceForm() {
     setLoading(true);
 
     try {
-      const finalUserId = userId || location.state?.userId || AuthStorageService.getUserId() || "";
-      const finalToken = token || location.state?.token || AuthStorageService.getToken() || "";
-      const userRole = AuthStorageService.getUserRole();
-
-      console.log("Creando servicio con:", {
-        userId: finalUserId,
-        tokenPresent: !!finalToken,
-        tokenLength: finalToken.length,
-        userRole: userRole,
-        categoryId: categoryId,
-        serviceName: serviceName
-      });
+      const finalUserId = getUserId();
+      const finalToken = getToken();
 
       if (!finalUserId || !finalToken) {
         setError("Error de autenticación. Por favor inicia sesión nuevamente.");
-        navigate(ROUTES.PUBLIC.LOGIN);
+        setLoading(false);
+        navigate(ROUTES.PUBLIC.LOGIN, { replace: true });
         return;
       }
 
-      if (userRole !== "trabajador") {
-        setError("Solo los trabajadores pueden crear servicios. Tu rol actual es: " + (userRole || "no definido"));
+      if (!isWorker(user?.role)) {
+        setError("Solo los trabajadores pueden crear servicios. Por favor, verifica tu rol.");
+        setLoading(false);
         return;
       }
 
@@ -133,26 +132,47 @@ export function CreateBasicServiceForm() {
       const selectedCategory = categories.find(c => c.id === categoryId);
       const categoryName = selectedCategory ? selectedCategory.name : categoryId;
 
-      const response = await serviceController.createBasicService({
-        userId: finalUserId,
-        category_id: categoryName,
-        title: serviceName,
-        description: description,
-        price_type: priceType,
-        price_range: priceType === "hourly" ? priceRange : undefined,
-        years_experience: yearsExperience,
-      }, finalToken);
+      if (mode === "edit") {
+        const updateDto: UpdateServiceDto = {
+          title: serviceName,
+          description,
+          category_id: categoryId,
+          // Base price: usar priceRange como proxy si viene (promedio)
+          base_price:
+            priceType === "hourly" && priceRange
+              ? (() => {
+                  const [min, max] = priceRange.split("-").map(Number);
+                  return max ? (min + max) / 2 : min;
+                })()
+              : undefined,
+          is_available: true,
+        };
 
-      console.log("Servicio creado exitosamente:", response);
-      
-      // Redirigir al dashboard después de crear el servicio exitosamente
-      // Si el trabajador necesita completar su perfil, puede hacerlo desde el dashboard
-      navigate(ROUTES.DASHBOARD.HOME, { 
-        state: { 
-          message: "Servicio creado exitosamente. ¡Ya puedes comenzar a recibir solicitudes!" 
-        },
-        replace: true 
-      });
+        await serviceController.updateService(
+          effectiveServiceId || "",
+          updateDto,
+          finalToken
+        );
+
+        navigate(`${ROUTES.DASHBOARD.SERVICES}?success=${encodeURIComponent("Servicio actualizado.")}`, {
+          replace: true,
+        });
+      } else {
+        await serviceController.createBasicService({
+          userId: finalUserId,
+          category_id: categoryId,
+          title: serviceName,
+          description: description,
+          price_type: priceType,
+          price_range: priceType === "hourly" ? priceRange : undefined,
+          years_experience: yearsExperience,
+        }, finalToken);
+
+        // Redirigir al dashboard de servicios después de crear el servicio exitosamente
+        navigate(`${ROUTES.DASHBOARD.SERVICES}?success=${encodeURIComponent("Servicio creado exitosamente. ¡Ya puedes comenzar a recibir solicitudes!")}`, { 
+          replace: true 
+        });
+      }
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -165,14 +185,17 @@ export function CreateBasicServiceForm() {
   };
 
   const handleCancel = () => {
-    // Limpiar datos y redirigir a login
-    AuthStorageService.clearAuthData();
-    navigate(ROUTES.PUBLIC.LOGIN, { replace: true });
+    // Redirigir a servicios si está en dashboard, sino a login
+    if (location.pathname.includes('/dashboard')) {
+      navigate(ROUTES.DASHBOARD.SERVICES);
+    } else {
+      navigate(ROUTES.PUBLIC.LOGIN, { replace: true });
+    }
   };
 
   // Verificar si tenemos userId y token antes de renderizar
-  const finalUserId = userId || location.state?.userId || AuthStorageService.getUserId() || "";
-  const finalToken = token || location.state?.token || AuthStorageService.getToken() || "";
+  const finalUserId = getUserId();
+  const finalToken = getToken();
 
   if (!finalUserId || !finalToken) {
     return (
@@ -187,16 +210,16 @@ export function CreateBasicServiceForm() {
   }
 
   return (
-    <div className="min-h-screen flex bg-white">
+    <div className="min-h-screen flex bg-background">
       {/* Panel Izquierdo - Información y Navegación */}
-      <div className="hidden md:flex flex-col justify-between px-8 py-6 bg-gray-50 border-r border-gray-200 w-96">
+      <div className="hidden md:flex flex-col justify-between px-8 py-6 bg-secondary border-r border-border w-96">
         <div>
           {/* Logo */}
           <div className="mb-8 mt-8">
             <div className="flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
                 <svg
-                  className="w-6 h-6 text-white"
+                  className="w-6 h-6 text-primary-foreground"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -209,27 +232,27 @@ export function CreateBasicServiceForm() {
                   />
                 </svg>
               </div>
-              <span className="text-2xl font-bold text-blue-600">PARA SERVIR</span>
+              <span className="text-2xl font-bold text-primary">PARA SERVIR</span>
             </div>
           </div>
 
           {/* Indicador de Progreso */}
           <div className="mb-8">
             <div className="flex gap-2 mb-2">
-              <div className="w-8 h-8 bg-red-600 rounded"></div>
-              <div className="w-8 h-8 bg-gray-300 rounded"></div>
-              <div className="w-8 h-8 bg-gray-300 rounded"></div>
-              <div className="w-8 h-8 bg-gray-300 rounded"></div>
+              <div className="w-8 h-8 bg-primary rounded"></div>
+              <div className="w-8 h-8 bg-muted rounded"></div>
+              <div className="w-8 h-8 bg-muted rounded"></div>
+              <div className="w-8 h-8 bg-muted rounded"></div>
             </div>
-            <p className="text-sm text-gray-600">Paso 1 de 4</p>
+            <p className="text-sm text-text-secondary">Paso 1 de 4</p>
           </div>
 
           {/* Información Principal */}
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-foreground mb-4 leading-tight">
               Necesitamos información sobre tus servicios a prestar
             </h2>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-text-secondary leading-relaxed">
               Necesitamos estos datos para poder brindarte fácilmente soluciones
             </p>
           </div>
@@ -241,14 +264,14 @@ export function CreateBasicServiceForm() {
             type="button"
             variant="outline"
             onClick={handleCancel}
-            className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-100"
+            className="flex-1"
           >
             Cancelar
           </Button>
           <Button
             type="submit"
             form="service-form"
-            className="flex-1 bg-gray-900 hover:bg-gray-800 text-white"
+            className="flex-1"
             disabled={loading}
           >
             Continuar
@@ -259,19 +282,19 @@ export function CreateBasicServiceForm() {
       {/* Panel Derecho - Formulario */}
       <div className="flex-1 flex flex-col px-8 py-6 max-w-2xl mx-auto">
         <div className="mb-8 mt-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">
+          <h1 className="text-2xl font-semibold text-foreground mb-6 leading-tight">
             Ingresa el nombre de tu servicio
           </h1>
         </div>
 
-        <Card className="p-8 shadow-lg border border-gray-200 bg-white">
+        <Card className="p-8 shadow-md border border-border">
           <form id="service-form" onSubmit={handleSubmit} className="space-y-6">
             {error && <Alert variant="destructive">{error}</Alert>}
 
             {/* Nombre del Servicio */}
             <div>
-              <Label htmlFor="serviceName" className="font-medium text-gray-700">
-                Nombre del servicio <span className="text-red-500">*</span>
+              <Label htmlFor="serviceName" className="font-medium text-foreground">
+                Nombre del servicio <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="serviceName"
@@ -280,25 +303,25 @@ export function CreateBasicServiceForm() {
                 value={serviceName}
                 onChange={(e) => setServiceName(e.target.value)}
                 placeholder="Carpinteria"
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1"
                 required
               />
             </div>
 
             {/* Categoría */}
             <div>
-              <Label htmlFor="category" className="font-medium text-gray-700">
-                Categoría <span className="text-red-500">*</span>
+              <Label htmlFor="category" className="font-medium text-foreground">
+                Categoría <span className="text-destructive">*</span>
               </Label>
               <Select
                 value={categoryId}
                 onValueChange={setCategoryId}
                 disabled={loadingCategories}
               >
-                <SelectTrigger id="category" className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white" aria-label="Selecciona una categoría">
+                <SelectTrigger id="category" className="mt-1" aria-label="Selecciona una categoría">
                   <SelectValue placeholder={loadingCategories ? "Cargando..." : "Selecciona una categoría"} />
                 </SelectTrigger>
-                <SelectContent className="z-[9999] bg-white border-gray-200 shadow-xl">
+                <SelectContent position="popper">
                   {categories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.name}
@@ -310,8 +333,8 @@ export function CreateBasicServiceForm() {
 
             {/* Descripción */}
             <div>
-              <Label htmlFor="description" className="font-medium text-gray-700">
-                Descripción <span className="text-red-500">*</span>
+              <Label htmlFor="description" className="font-medium text-foreground">
+                Descripción <span className="text-destructive">*</span>
               </Label>
               <Textarea
                 id="description"
@@ -319,7 +342,7 @@ export function CreateBasicServiceForm() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Arreglo todo tipo de cosas que se tenga q ver con madera"
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1"
                 rows={4}
                 required
               />
@@ -327,7 +350,7 @@ export function CreateBasicServiceForm() {
 
             {/* Precio por Hora */}
             <div>
-              <Label id="price-hourly-label" htmlFor="price-hourly" className="font-medium text-gray-700 mb-3 block">
+              <Label id="price-hourly-label" htmlFor="price-hourly" className="font-medium text-foreground mb-3 block">
                 Precio la hora
               </Label>
               <div className="flex flex-wrap gap-3" role="group" aria-labelledby="price-hourly-label">
@@ -384,7 +407,7 @@ export function CreateBasicServiceForm() {
 
             {/* Precio por Obra */}
             <div className="mt-4">
-              <Label htmlFor="price-per-job" className="font-medium text-gray-700 mb-3 block">
+              <Label htmlFor="price-per-job" className="font-medium text-foreground mb-3 block">
                 Precio por obra
               </Label>
               <SelectionButton
@@ -408,8 +431,8 @@ export function CreateBasicServiceForm() {
 
             {/* Años de Experiencia */}
             <div>
-              <Label id="yearsExperience-label" htmlFor="yearsExperience" className="font-medium text-gray-700 mb-3 block">
-                Años de experiencia <span className="text-red-500">*</span>
+              <Label id="yearsExperience-label" htmlFor="yearsExperience" className="font-medium text-foreground mb-3 block">
+                Años de experiencia <span className="text-destructive">*</span>
               </Label>
               <div className="flex flex-wrap gap-3" role="group" aria-labelledby="yearsExperience-label">
                 <SelectionButton
@@ -475,7 +498,7 @@ export function CreateBasicServiceForm() {
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-gray-900 hover:bg-gray-800 text-white"
+                className="flex-1"
                 disabled={loading || loadingCategories}
               >
                 {loading ? "Guardando..." : "Continuar"}

@@ -53,14 +53,6 @@ export class CreateBasicServiceUseCase {
                 base_price: basePrice,
             };
 
-            console.log("Enviando petición a:", `${this.apiUrl}${API_CONFIG.endpoints.services.createBasic}`);
-            console.log("Body:", requestBody);
-            console.log("Token presente:", !!token);
-            console.log("Token (primeros 20 chars):", token.substring(0, 20) + "...");
-            console.log("Headers que se enviarán:", {
-                'Authorization': `Bearer ${token.substring(0, 20)}...`
-            });
-
             // Usar el token pasado como parámetro directamente en los headers
             const data = await httpClient.post<{
                 status?: string;
@@ -70,9 +62,7 @@ export class CreateBasicServiceUseCase {
             }>(API_CONFIG.endpoints.services.createBasic, requestBody, {
                 'Authorization': `Bearer ${token}`
             });
-
-            console.log("Respuesta del backend:", data);
-
+            
             return {
                 serviceId: data.service?.id || data.serviceId || `service-${Date.now()}`,
                 message: data.message || "Servicio creado exitosamente",

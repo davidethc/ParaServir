@@ -28,9 +28,11 @@ export const ROUTES = {
     CATEGORY_DETAIL: (id: string) => `/dashboard/categories/${id}`,
     // 🔽 Servicios / Solicitudes
     REQUESTS: "/dashboard/requests",
-    CREATE_SERVICE: "/dashboard/services/create",
-    CREATE_REQUEST: "/dashboard/requests/create",
+    REQUESTS_NEW: "/dashboard/requests/new",
     CHATS: "/dashboard/chats",
+    SERVICES: "/dashboard/services",
+    SERVICES_NEW: "/dashboard/services/new",
+    SERVICE_EDIT: (id: string) => `/dashboard/services/${id}/edit`,
     HELP: "/dashboard/help",
     SETTINGS: "/dashboard/settings",
     SEARCH: (query?: string) => {
@@ -83,13 +85,23 @@ export const isPublicRoute = (path: string): boolean => {
 
 /**
  * Obtener la ruta de redirección después del login según el rol
- * Usuarios normales van a ver categorías de servicios
- * Trabajadores van directamente al dashboard (crear servicio solo en registro)
+ * Usuario → categorías; Trabajador → dashboard de servicios
  */
 export const getPostLoginRoute = (role: string): string => {
   if (role === "trabajador") {
-    return ROUTES.DASHBOARD.CATEGORIES;
+    return ROUTES.DASHBOARD.SERVICES;
   }
   // Usuarios normales van directamente a ver las categorías de servicios
+  return ROUTES.DASHBOARD.CATEGORIES;
+};
+
+/**
+ * Obtener la ruta de redirección inmediata después de registrarse
+ * Trabajador debe crear su primer servicio; usuario va a categorías
+ */
+export const getPostRegisterRoute = (role: string): string => {
+  if (role === "trabajador") {
+    return ROUTES.WORKER.CREATE_SERVICE;
+  }
   return ROUTES.DASHBOARD.CATEGORIES;
 };

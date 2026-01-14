@@ -300,10 +300,12 @@ AuthStorageService.clearAuthData();
 ## 🎨 Estilos Unificados
 
 ### Colores:
-- **Primario:** `blue-600` / `blue-700`
-- **Éxito:** `green-600`
-- **Error:** `red-600`
-- **Texto:** `gray-900` (títulos), `gray-600` (descripciones), `gray-500` (secundario)
+- **Primario:** `bg-primary` / `text-primary` (Soft Indigo #6F6AE8)
+- **Acento:** `bg-accent` / `text-accent` (Sky Indigo #4DA3FF)
+- **Éxito:** `text-[hsl(var(--color-success))]` (#2FB8A8)
+- **Error/Destructivo:** `bg-destructive` / `text-destructive` (#E06262)
+- **Texto:** `text-foreground` (títulos), `text-muted-foreground` (descripciones)
+- **Fondo:** `bg-background` (principal), `bg-card` (tarjetas)
 
 ### Espaciado:
 - **Padding de página:** `p-6`

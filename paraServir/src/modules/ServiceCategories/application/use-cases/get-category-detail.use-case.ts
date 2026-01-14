@@ -68,7 +68,6 @@ export class GetCategoryDetailUseCase {
     try {
       // Llamada al backend real: GET /categories/:id
       const endpoint = API_CONFIG.endpoints.serviceCategories.getById(categoryId);
-      console.log("Fetching category detail from:", endpoint);
       const backendResponse = await this.httpClient.get<{
         status?: string;
         category?: {
@@ -104,9 +103,6 @@ export class GetCategoryDetailUseCase {
         }>;
       }>(endpoint);
 
-      console.log("Backend response:", backendResponse);
-      console.log("Backend response keys:", Object.keys(backendResponse));
-
       // El backend devuelve: { status: "success", category: {...}, workers: [...], services: [...] }
       const category = backendResponse.category || {
         id: categoryId,
@@ -118,7 +114,6 @@ export class GetCategoryDetailUseCase {
 
       // Validar que category tenga al menos id y name
       if (!category.id || !category.name) {
-        console.error("Category data incomplete:", category);
         throw new Error("La categoría recibida no tiene la estructura esperada");
       }
 
@@ -156,13 +151,6 @@ export class GetCategoryDetailUseCase {
         })),
       };
 
-      console.log("Processed result:", result);
-      console.log("Result validation:", {
-        hasCategory: !!result.category,
-        categoryName: result.category.name,
-        workersLength: result.workers.length,
-        servicesLength: result.services.length,
-      });
       return result;
     } catch (error) {
       // Manejar errores específicos

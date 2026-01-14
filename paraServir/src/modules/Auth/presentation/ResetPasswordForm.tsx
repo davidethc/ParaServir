@@ -6,6 +6,7 @@ import { Label } from "@/shared/components/ui/label";
 import { Alert } from "@/shared/components/ui/alert";
 import { Link, useNavigate } from "react-router-dom";
 import { ROUTES } from "@/shared/constants/routes.constants";
+import { AuthFooter } from "@/shared/components/layout/AuthFooter";
 
 export function ResetPasswordForm() {
   const [password, setPassword] = useState("");
@@ -40,18 +41,18 @@ export function ResetPasswordForm() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-white">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background">
       <div className="flex flex-col items-center justify-center w-full mt-12">
         <img src="src/shared/Assets/logo_servir.png" alt="Logo ParaServir" className="w-32 h-32 object-contain mb-2" />
         <h2 className="text-2xl font-bold text-center mb-2">Actualizar contraseña</h2>
-        <p className="text-gray-600 text-center mb-6 max-w-md">
+        <p className="text-muted-foreground text-center mb-6 max-w-md">
           Crea tu nueva contraseña con un mínimo de 8 caracteres y una combinación de letras y números.
         </p>
         <Card className="w-full max-w-md p-8 shadow-none border-none">
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && <Alert variant="destructive">{error}</Alert>}
             <div>
-              <Label htmlFor="password" className="font-medium">Nueva contraseña <span className="text-red-500">*</span></Label>
+              <Label htmlFor="password" className="font-medium">Nueva contraseña <span className="text-destructive">*</span></Label>
               <div className="relative mt-1">
                 <Input
                   id="password"
@@ -63,7 +64,7 @@ export function ResetPasswordForm() {
                 />
                 <button
                   type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   tabIndex={-1}
                   onClick={() => setShowPassword((v) => !v)}
                 >
@@ -75,14 +76,14 @@ export function ResetPasswordForm() {
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
-                <span className={isLong ? "text-green-600" : "text-gray-400"}>● 8 caracteres</span>
-                <span className={hasUpper ? "text-green-600" : "text-gray-400"}>● Letra mayúscula (A-Z)</span>
-                <span className={hasNumber ? "text-green-600" : "text-gray-400"}>● Números (0-9)</span>
-                <span className={hasLower ? "text-green-600" : "text-gray-400"}>● Letra minúscula (a-z)</span>
+                <span className={isLong ? "text-[hsl(var(--color-success))]" : "text-muted-foreground"}>● 8 caracteres</span>
+                <span className={hasUpper ? "text-[hsl(var(--color-success))]" : "text-muted-foreground"}>● Letra mayúscula (A-Z)</span>
+                <span className={hasNumber ? "text-[hsl(var(--color-success))]" : "text-muted-foreground"}>● Números (0-9)</span>
+                <span className={hasLower ? "text-[hsl(var(--color-success))]" : "text-muted-foreground"}>● Letra minúscula (a-z)</span>
               </div>
             </div>
             <div>
-              <Label htmlFor="confirm" className="font-medium">Confirmar nueva contraseña <span className="text-red-500">*</span></Label>
+              <Label htmlFor="confirm" className="font-medium">Confirmar nueva contraseña <span className="text-destructive">*</span></Label>
               <div className="relative mt-1">
                 <Input
                   id="confirm"
@@ -94,7 +95,7 @@ export function ResetPasswordForm() {
                 />
                 <button
                   type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   tabIndex={-1}
                   onClick={() => setShowConfirm((v) => !v)}
                 >
@@ -106,17 +107,13 @@ export function ResetPasswordForm() {
                 </button>
               </div>
             </div>
-            <Button type="submit" className="w-full bg-gray-900 text-white hover:bg-gray-800">
+            <Button type="submit" className="w-full">
               Guardar
             </Button>
           </form>
         </Card>
       </div>
-      <footer className="text-xs text-gray-400 text-center mt-8 mb-2 w-full">
-        © 2025 Todos los derechos reservados. <span className="mx-1">·</span>
-        <Link to="#" className="hover:underline">Términos y Condiciones</Link> <span className="mx-1">·</span>
-        <Link to="#" className="hover:underline">Política de Privacidad</Link>
-      </footer>
+      <AuthFooter />
     </div>
   );
 }

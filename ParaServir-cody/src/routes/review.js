@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createReview, getWorkerReviews, getRequestReview, updateReview, deleteReview } from "../controllers/review.js";
+import { createReview, getWorkerReviews, getRequestReview, getClientReviews, updateReview, deleteReview } from "../controllers/review.js";
 import { auth } from "../middlewares/auth.js";
 import { verifyOwnership } from "../middlewares/verifyOwnership.js";
 
@@ -10,6 +10,9 @@ router.post('/', auth, createReview);
 
 // Obtener reseñas de un trabajador (público)
 router.get('/worker/:workerId', getWorkerReviews);
+
+// Obtener reseñas creadas por el cliente autenticado (requiere auth)
+router.get('/client', auth, getClientReviews);
 
 // Obtener reseña de una solicitud (público)
 router.get('/request/:requestId', getRequestReview);

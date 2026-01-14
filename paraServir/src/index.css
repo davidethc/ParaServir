@@ -1,1 +1,247 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
+
+@theme {
+  /* ============================================
+     PALETA OFICIAL - SOFT INDIGO + SKY INDIGO
+     Tailwind v4: Variables RGB sin función rgb()
+     ============================================ */
+  
+  /* Color Primario — Soft Indigo #6F6AE8 */
+  --color-primary: 111 106 232;
+  --color-primary-foreground: 255 255 255;
+  --color-primary-hover: 94 90 214;
+  --color-primary-active: 79 75 196;
+  --color-primary-light: 245 244 252;
+  
+  /* Acento Azul Suave — Sky Indigo #4DA3FF */
+  --color-accent: 77 163 255;
+  --color-accent-foreground: 255 255 255;
+  --color-accent-soft: 234 242 255;
+  
+  /* Estados */
+  --color-success: 47 184 168;
+  --color-success-foreground: 255 255 255;
+  --color-success-light: 230 247 245;
+  
+  --color-warning: 244 183 64;
+  --color-warning-foreground: 255 255 255;
+  --color-warning-light: 255 244 219;
+  
+  --color-destructive: 224 98 98;
+  --color-destructive-foreground: 255 255 255;
+  --color-destructive-light: 252 231 231;
+  
+  /* Fondos */
+  --color-background: 249 250 254;
+  --color-foreground: 30 31 51;
+  
+  /* Fondos de secciones */
+  --color-secondary: 241 243 251;
+  --color-secondary-foreground: 30 31 51;
+  
+  /* Superficies / Cards */
+  --color-card: 255 255 255;
+  --color-card-foreground: 30 31 51;
+  --color-card-hover: 251 251 255;
+  
+  /* Texto */
+  --color-muted-foreground: 138 141 178;
+  --color-muted: 241 243 251;
+  
+  /* Bordes */
+  --color-border: 227 230 244;
+  --color-input: 227 230 244;
+  --color-ring: 111 106 232;
+  
+  /* Placeholder - Color muy sutil y claro, casi imperceptible */
+  --color-placeholder: 180 183 200;
+  
+  /* Texto secundario */
+  --color-text-secondary: 75 78 109;
+  
+  /* Popover */
+  --color-popover: 255 255 255;
+  --color-popover-foreground: 30 31 51;
+  
+  /* Border radius */
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-lg: 1rem;
+}
+
+/* Base styles using the variables - Compatibilidad con shadcn/ui */
+:root {
+  --background: rgb(var(--color-background));
+  --foreground: rgb(var(--color-foreground));
+  --card: rgb(var(--color-card));
+  --card-foreground: rgb(var(--color-card-foreground));
+  --popover: rgb(var(--color-popover));
+  --popover-foreground: rgb(var(--color-popover-foreground));
+  --primary: rgb(var(--color-primary));
+  --primary-foreground: rgb(var(--color-primary-foreground));
+  --secondary: rgb(var(--color-secondary));
+  --secondary-foreground: rgb(var(--color-secondary-foreground));
+  --muted: rgb(var(--color-muted));
+  --muted-foreground: rgb(var(--color-muted-foreground));
+  --accent: rgb(var(--color-accent));
+  --accent-foreground: rgb(var(--color-accent-foreground));
+  --destructive: rgb(var(--color-destructive));
+  --destructive-foreground: rgb(var(--color-destructive-foreground));
+  --border: rgb(var(--color-border));
+  --input: rgb(var(--color-input));
+  --ring: rgb(var(--color-ring));
+  --radius: var(--radius);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    background-color: rgb(var(--color-background));
+    color: rgb(var(--color-foreground));
+    font-family: 'Inter', sans-serif;
+  }
+  
+  /* Headings */
+  h1 {
+    @apply text-3xl font-semibold tracking-tight lg:text-4xl;
+    color: rgb(var(--color-foreground));
+    line-height: 1.25;
+  }
+  h2 {
+    @apply text-2xl font-semibold tracking-tight;
+    color: rgb(var(--color-foreground));
+    line-height: 1.25;
+  }
+  h3 {
+    @apply text-xl font-medium tracking-tight;
+    color: rgb(var(--color-foreground));
+    line-height: 1.25;
+  }
+  p {
+    @apply leading-relaxed;
+    color: rgb(var(--color-muted-foreground));
+    line-height: 1.55;
+  }
+}
+
+@layer utilities {
+  /* Utilidades personalizadas para colores del tema */
+  .bg-primary {
+    background-color: rgb(var(--color-primary));
+  }
+  .bg-primary-hover {
+    background-color: rgb(var(--color-primary-hover));
+  }
+  .bg-primary-active {
+    background-color: rgb(var(--color-primary-active));
+  }
+  .bg-primary-light {
+    background-color: rgb(var(--color-primary-light));
+  }
+  .text-primary {
+    color: rgb(var(--color-primary));
+  }
+  .text-primary-foreground {
+    color: rgb(var(--color-primary-foreground));
+  }
+  .text-primary-hover {
+    color: rgb(var(--color-primary-hover));
+  }
+  .bg-accent {
+    background-color: rgb(var(--color-accent));
+  }
+  .bg-accent-soft {
+    background-color: rgb(var(--color-accent-soft));
+  }
+  .text-accent {
+    color: rgb(var(--color-accent));
+  }
+  .text-accent-foreground {
+    color: rgb(var(--color-accent-foreground));
+  }
+  .bg-success {
+    background-color: rgb(var(--color-success));
+  }
+  .text-success {
+    color: rgb(var(--color-success));
+  }
+  .bg-warning {
+    background-color: rgb(var(--color-warning));
+  }
+  .text-warning {
+    color: rgb(var(--color-warning));
+  }
+  .bg-destructive {
+    background-color: rgb(var(--color-destructive));
+  }
+  .text-destructive {
+    color: rgb(var(--color-destructive));
+  }
+  .text-destructive-foreground {
+    color: rgb(var(--color-destructive-foreground));
+  }
+  .bg-background {
+    background-color: rgb(var(--color-background));
+  }
+  .text-foreground {
+    color: rgb(var(--color-foreground));
+  }
+  .bg-secondary {
+    background-color: rgb(var(--color-secondary));
+  }
+  .text-secondary {
+    color: rgb(var(--color-secondary-foreground));
+  }
+  .bg-card {
+    background-color: rgb(var(--color-card));
+  }
+  .text-card-foreground {
+    color: rgb(var(--color-card-foreground));
+  }
+  .bg-muted {
+    background-color: rgb(var(--color-muted));
+  }
+  .text-muted-foreground {
+    color: rgb(var(--color-muted-foreground));
+  }
+  .border-border {
+    border-color: rgb(var(--color-border));
+  }
+  .text-text-secondary {
+    color: rgb(var(--color-text-secondary));
+  }
+  .text-placeholder {
+    color: rgb(var(--color-placeholder));
+  }
+  /* Placeholder con opacidad reducida para que sea más sutil */
+  .placeholder\:text-placeholder\/60::placeholder {
+    color: rgba(var(--color-placeholder), 0.6);
+  }
+  .border-primary {
+    border-color: rgb(var(--color-primary));
+  }
+  .ring-primary {
+    --tw-ring-color: rgb(var(--color-primary));
+  }
+  .focus-visible\:ring-primary:focus-visible {
+    --tw-ring-color: rgb(var(--color-primary));
+  }
+  .hover\:bg-primary-hover:hover {
+    background-color: rgb(var(--color-primary-hover));
+  }
+  .hover\:bg-primary:hover {
+    background-color: rgb(var(--color-primary));
+  }
+  .hover\:text-primary:hover {
+    color: rgb(var(--color-primary));
+  }
+  .hover\:text-primary-hover:hover {
+    color: rgb(var(--color-primary-hover));
+  }
+  .hover\:border-primary:hover {
+    border-color: rgb(var(--color-primary));
+  }
+}

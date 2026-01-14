@@ -3,6 +3,7 @@ import { checkDuplicateEmail } from "../helpers/checkDuplicateEmail.js";
 import bcrypt from "bcrypt";
 import { createWorker, updateWorker } from "./worker.js";
 import { normalizeUserInput } from "../helpers/normalizeUser.js";
+import { validateUserUpdateData } from "../helpers/validateUser.js";
 import { sendVerificationEmail } from "../helpers/mail.js";
 import { createToken } from "../helpers/jwt.js";
 
@@ -245,41 +246,55 @@ export const update = async (req, res) => {
         await client.query('BEGIN');
 
         const { id } = req.params;
+        const userId = req.user?.id; // ID del usuario autenticado
 
-        // Normalizamos la entrada igual que en createUser
-        const { user, worker } = normalizeUserInput(req.body);
+        // SEGURIDAD: Solo puede editar su propio perfil
+        if (userId !== id) {
+            await client.query('ROLLBACK');
+            return res.status(403).json({
+                status: "error",
+                message: "No tienes permiso para editar este perfil"
+            });
+        }
 
-        // Verificar si el usuario existe
+        // Verificar si el usuario existe primero
         const userExists = await pool.query(
             `SELECT * FROM users WHERE id = $1 FOR UPDATE`, // Bloquea la fila para la actualización
             [id]
         );
 
         if (userExists.rowCount === 0) {
+            await client.query('ROLLBACK');
             return res.status(404).json({
+                status: "error",
                 message: "El usuario no existe"
             });
         }
 
+        // SEGURIDAD: No permitir cambiar el role (solo admins pueden hacerlo)
+        // El role se mantiene igual al que ya tiene el usuario
+        const currentRole = userExists.rows[0].role;
+
+        // Validar datos de actualización (password es opcional)
+        const user = validateUserUpdateData(req.body);
+
         // Si viene password, la encriptamos
         let passwordHash = userExists.rows[0].password_hash;
-        if (user.password) {
+        if (user.password && user.password.length > 0) {
             passwordHash = await bcrypt.hash(user.password, 10);
         }
 
-        // Actualizar tabla users
+        // Actualizar tabla users (SIN cambiar el role)
         const updatedUserResult = await client.query(
             `UPDATE users
              SET email = $1,
                  password_hash = $2,
-                 role = $3,
-                 updated_at = NOW()
+                 role = $3
              WHERE id = $4
              RETURNING *`,
             [
                 user.email,
                 passwordHash,
-                user.role,
                 id
             ]
         );
@@ -306,26 +321,65 @@ export const update = async (req, res) => {
             ]
         );
 
-        // Actualización extra si es worker (opcional), usando el mismo cliente
-        if (worker) {
-            const updatedWorker = await updateWorker(client, id, worker);
-            updatedUser.worker = updatedWorker;
-        }
+        // NO actualizar perfil de worker aquí - eso se hace en /workers/profile
+        // El perfil profesional se gestiona por separado para mantener separación de responsabilidades
 
         await client.query('COMMIT');
+        client.release(); // Liberar el cliente antes de hacer consultas adicionales
+
+        // Obtener datos completos del usuario actualizado (incluyendo profile)
+        const { rows: profileRows } = await pool.query(
+            `SELECT first_name, last_name, cedula, phone, location, avatar_url
+             FROM profiles WHERE user_id = $1`,
+            [id]
+        );
+
+        // Si es trabajador, incluir información del perfil profesional
+        let workerProfile = undefined;
+        if (currentRole === 'trabajador') {
+            const workerProfileResult = await pool.query(
+                `SELECT years_experience, certification_url, verification_status, is_active
+                 FROM worker_profiles
+                 WHERE user_id = $1`,
+                [id]
+            );
+            if (workerProfileResult.rows.length > 0) {
+                workerProfile = workerProfileResult.rows[0];
+            }
+        }
+
+        const updatedUserData = {
+            id: updatedUserResult.rows[0].id,
+            email: updatedUserResult.rows[0].email,
+            role: updatedUserResult.rows[0].role,
+            is_verified: updatedUserResult.rows[0].is_verified,
+            created_at: updatedUserResult.rows[0].created_at,
+            first_name: profileRows[0]?.first_name || null,
+            last_name: profileRows[0]?.last_name || null,
+            cedula: profileRows[0]?.cedula || null,
+            phone: profileRows[0]?.phone || null,
+            location: profileRows[0]?.location || null,
+            avatar_url: profileRows[0]?.avatar_url || null,
+            worker_profile: workerProfile
+        };
 
         return res.status(200).json({
+            status: "success",
             message: 'Usuario actualizado',
-            user: updatedUser
+            user: updatedUserData
         });
 
     } catch (error) {
-        await client.query('ROLLBACK');
+        try {
+            await client.query('ROLLBACK');
+        } catch (rollbackError) {
+            // Ignorar errores de rollback
+        }
+        client.release();
         return res.status(400).json({
+            status: "error",
             message: 'Error al actualizar el usuario',
             error: error.message
         });
-    } finally {
-        client.release();
     }
 };

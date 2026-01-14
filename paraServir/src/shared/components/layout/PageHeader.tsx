@@ -22,11 +22,11 @@ export function PageHeader({
     <div className={cn("mb-6", className)}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-semibold text-foreground mb-2 leading-tight">
             {title}
           </h1>
           {description && (
-            <p className="text-gray-600">
+            <p className="text-text-secondary leading-relaxed">
               {description}
             </p>
           )}

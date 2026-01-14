@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Search } from "lucide-react";
+import { Search, Sparkles, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import {
@@ -10,6 +10,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/shared/components/ui/select";
+import { Badge } from "@/shared/components/ui/badge";
 import { cn } from "@/shared/lib/utils";
 
 interface SearchOption {
@@ -46,94 +47,189 @@ interface SearchBarProps {
    * Clase CSS adicional
    */
   className?: string;
+  /**
+   * Variante del diseño (default, hero)
+   */
+  variant?: "default" | "hero";
 }
 
 /**
- * Barra de búsqueda unificada y reutilizable
- * Usada en DashboardHomePage y otras páginas que requieren búsqueda
+ * Barra de búsqueda profesional y moderna
+ * Diseño tipo marketplace con mejor UX y visual atractivo
  */
 export function SearchBar({
   searchPlaceholder = "¿Qué trabajo estás buscando?",
-  categoryPlaceholder = "Seleccionar Categoría",
+  categoryPlaceholder = "Todas las categorías",
   categories = [],
   loadingCategories = false,
   popularSearches = [],
   onSearch,
   className,
+  variant = "default",
 }: SearchBarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [isFocused, setIsFocused] = useState(false);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    onSearch(searchQuery, selectedCategory || undefined);
+    if (searchQuery.trim() || selectedCategory) {
+      onSearch(searchQuery.trim(), selectedCategory || undefined);
+    }
   };
 
   const handlePopularSearch = (search: string) => {
     setSearchQuery(search);
-    // Trigger search inmediatamente
     onSearch(search, selectedCategory || undefined);
   };
 
-  return (
-    <form onSubmit={handleSubmit} className={cn("space-y-4", className)}>
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <Input
-            type="text"
-            placeholder={searchPlaceholder}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-12 text-base border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-          />
-        </div>
-        <Select
-          value={selectedCategory}
-          onValueChange={setSelectedCategory}
-          disabled={loadingCategories}
-        >
-          <SelectTrigger className="w-full md:w-64 h-12 border-gray-300 focus:border-blue-500">
-            <SelectValue
-              placeholder={
-                loadingCategories ? "Cargando..." : categoryPlaceholder
-              }
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id}>
-                {cat.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          type="submit"
-          className="h-12 px-8 bg-blue-600 hover:bg-blue-700 text-white font-medium"
-        >
-          Buscar
-        </Button>
-      </div>
+  const clearSearch = () => {
+    setSearchQuery("");
+    if (selectedCategory) {
+      onSearch("", selectedCategory);
+    }
+  };
 
-      {/* Búsquedas populares */}
-      {popularSearches.length > 0 && (
-        <div>
-          <p className="text-sm text-gray-600 mb-2">Búsquedas Populares:</p>
-          <div className="flex flex-wrap gap-2">
-            {popularSearches.map((search, index) => (
+  const isHero = variant === "hero";
+
+  return (
+    <div className={cn("w-full", className)}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Barra de búsqueda principal */}
+        <div
+          className={cn(
+            "relative flex flex-col md:flex-row gap-2",
+            "bg-card rounded-xl border-2 transition-all duration-200",
+            isFocused
+              ? "border-primary shadow-lg shadow-primary/10"
+              : "border-border shadow-md hover:shadow-lg",
+            isHero && "shadow-xl"
+          )}
+        >
+          {/* Input de búsqueda */}
+          <div className="flex-1 relative">
+            <Search
+              className={cn(
+                "absolute left-4 top-1/2 -translate-y-1/2 transition-colors",
+                isFocused ? "text-primary" : "text-muted-foreground",
+                "w-5 h-5"
+              )}
+            />
+            <Input
+              type="text"
+              placeholder={searchPlaceholder}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              className={cn(
+                "pl-12 pr-10 border-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                "h-14 md:h-16 text-base",
+                "bg-transparent"
+              )}
+            />
+            {searchQuery && (
               <button
-                key={index}
                 type="button"
-                onClick={() => handlePopularSearch(search)}
-                className="px-4 py-2 bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700 rounded-full text-sm font-medium transition-colors"
+                onClick={clearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-muted transition-colors"
+                aria-label="Limpiar búsqueda"
               >
-                {search}
+                <X className="h-4 w-4 text-muted-foreground" />
               </button>
-            ))}
+            )}
           </div>
+
+          {/* Separador visual */}
+          <div className="hidden md:block w-px bg-border self-stretch my-2" />
+
+          {/* Selector de categoría */}
+          <div className="md:w-64">
+            <Select
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+              disabled={loadingCategories}
+            >
+              <SelectTrigger
+                className={cn(
+                  "h-14 md:h-16 border-0 focus:ring-0 bg-transparent",
+                  "text-base font-medium"
+                )}
+              >
+                <SelectValue
+                  placeholder={
+                    loadingCategories ? "Cargando..." : categoryPlaceholder
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                {categories.length > 0 ? (
+                  categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                    No hay categorías disponibles
+                  </div>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Botón de búsqueda */}
+          <Button
+            type="submit"
+            size="lg"
+            className={cn(
+              "h-14 md:h-16 px-6 md:px-8 rounded-r-xl md:rounded-l-none rounded-l-xl md:rounded-r-xl",
+              "bg-primary hover:bg-primary-hover text-primary-foreground",
+              "font-semibold text-base shadow-sm",
+              "transition-all duration-200 hover:shadow-md"
+            )}
+            disabled={!searchQuery.trim() && !selectedCategory}
+          >
+            <Search className="h-5 w-5 md:mr-2" />
+            <span className="hidden md:inline">Buscar</span>
+          </Button>
         </div>
-      )}
-    </form>
+
+        {/* Búsquedas populares */}
+        {popularSearches.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Sparkles className="h-4 w-4" />
+              <span className="font-medium">Búsquedas populares:</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {popularSearches.map((search, index) => (
+                <Badge
+                  key={index}
+                  variant="secondary"
+                  className={cn(
+                    "px-4 py-1.5 cursor-pointer transition-all duration-200",
+                    "hover:bg-primary hover:text-primary-foreground",
+                    "hover:scale-105 font-medium text-sm",
+                    "border border-border hover:border-primary"
+                  )}
+                  onClick={() => handlePopularSearch(search)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handlePopularSearch(search);
+                    }
+                  }}
+                >
+                  {search}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+      </form>
+    </div>
   );
 }

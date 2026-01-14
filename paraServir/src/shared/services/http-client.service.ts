@@ -58,17 +58,29 @@ export class HttpClientService {
   private handleError(error: unknown): never {
     let errorMessage = 'Error en la petición';
     
-    if (axios.isAxiosError(error)) {
-      if (error.response) {
-        const errorData = error.response.data;
-        errorMessage = errorData.message || errorData.error || errorMessage;
-      } else if (error.request) {
-        errorMessage = 'No se recibió respuesta del servidor';
-      } else {
-        errorMessage = error.message;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorData.error || errorMessage;
+      
+      // Mensajes más específicos según el código de estado
+      if (response.status === 401) {
+        errorMessage = errorData.message || 'Token inválido o sesión expirada. Por favor, inicia sesión nuevamente.';
+      } else if (response.status === 403) {
+        errorMessage = errorData.message || 'No tienes permisos para realizar esta acción.';
+      } else if (response.status === 404) {
+        errorMessage = errorData.message || 'Recurso no encontrado.';
+      } else if (response.status === 400) {
+        errorMessage = errorData.message || 'Datos inválidos. Verifica la información ingresada.';
       }
-    } else if (error instanceof Error) {
-      errorMessage = error.message;
+    } catch {
+      // Si no se puede parsear JSON, usar el mensaje por defecto
+      if (response.status === 401) {
+        errorMessage = 'Token inválido o sesión expirada. Por favor, inicia sesión nuevamente.';
+      } else if (response.status === 403) {
+        errorMessage = 'No tienes permisos para realizar esta acción.';
+      } else {
+        errorMessage = `Error ${response.status}: ${response.statusText}`;
+      }
     }
 
     throw new Error(errorMessage);
@@ -76,15 +88,23 @@ export class HttpClientService {
 
   /**
    * Realiza una petición GET
+   * @param endpoint - Ruta del endpoint
+   * @param headers - Headers adicionales
+   * @param silent404 - Si es true, no lanza error para 404 (útil para recursos opcionales)
    */
-  async get<T>(endpoint: string, headers?: Record<string, string>): Promise<T> {
-    try {
-      const response = await this.axiosInstance.get<T>(endpoint, {
-        headers: this.buildHeaders(headers),
-      });
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
+  async get<T>(endpoint: string, headers?: Record<string, string>, silent404: boolean = false): Promise<T | null> {
+    const url = `${this.baseUrl}${endpoint}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.buildHeaders(headers),
+    });
+
+    if (!response.ok) {
+      // Si es 404 y silent404 está activado, retornar null en lugar de lanzar error
+      if (response.status === 404 && silent404) {
+        return null;
+      }
+      await this.handleError(response);
     }
   }
 

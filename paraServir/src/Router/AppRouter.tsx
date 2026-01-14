@@ -7,6 +7,7 @@ import { ForgotPasswordForm } from "@/modules/Auth/presentation/ForgotPasswordFo
 import { VerifyCodeForm } from "@/modules/Auth/presentation/VerifyCodeForm";
 import { ResetPasswordForm } from "@/modules/Auth/presentation/ResetPasswordForm";
 import { SuccessResetForm } from "@/modules/Auth/presentation/SuccessResetForm";
+import { VerifyEmailPage } from "@/modules/Auth/presentation/VerifyEmailPage";
 import { CompleteWorkerProfileForm } from "@/modules/workers/presentation/CompleteWorkerProfileForm";
 import { CreateBasicServiceForm } from "@/modules/Services/presentation/CreateBasicServiceForm";
 
@@ -18,6 +19,7 @@ import { DashboardCategoryDetailPage } from "@/modules/Dashboard/presentation/pa
 import { DashboardChatsPage } from "@/modules/Dashboard/presentation/pages/DashboardChatsPage";
 import { DashboardHelpPage } from "@/modules/Dashboard/presentation/pages/DashboardHelpPage";
 import { DashboardSettingsPage } from "@/modules/Dashboard/presentation/pages/DashboardSettingsPage";
+import { ClientCreateRequestForm } from "@/modules/ServiceRequests/presentation/ClientCreateRequestForm";
 
 // Guards
 import { ProtectedRoute } from "@/shared/infra/guards/ProtectedRoute";
@@ -26,10 +28,11 @@ import { RoleProtectedRoute } from "@/shared/infra/guards/RoleProtectedRoute";
 
 // Constantes de rutas
 import { ROUTES } from "@/shared/constants/routes.constants";
-import { EmptyState } from "@/shared/components/feedback/EmptyState";
-import { ProfileSettingsPage } from "@/modules/Settings/Presentation/Pages/ProfileSettingsPage";
-import { ServiceRequestsPage } from "@/modules/ServiceRequests/presentation/pages/ServiceRequestsPage";
-import { CreateServiceRequestPage } from "@/modules/ServiceRequests/presentation/pages/CreateServiceRequestPage";
+import { DashboardServiceEditPage } from "@/modules/Dashboard/presentation/pages/DashboardServiceEditPage";
+import { DashboardServicesPage } from "@/modules/Dashboard/presentation/pages/DashboardServicesPage";
+import { DashboardRequestDetailPage } from "@/modules/Dashboard/presentation/pages/DashboardRequestDetailPage";
+import { WorkerProfilePage } from "@/modules/workers/presentation/pages/WorkerProfilePage";
+import { WorkersListPage } from "@/modules/workers/presentation/pages/WorkersListPage";
 
 export function AppRouter() {
   return (
@@ -37,6 +40,8 @@ export function AppRouter() {
       <Routes>
         {/* Rutas públicas - accesibles sin autenticación */}
         <Route path={ROUTES.PUBLIC.HOME} element={<HomePage />} />
+        <Route path="/workers" element={<WorkersListPage />} />
+        <Route path="/worker/:id" element={<WorkerProfilePage />} />
 
         {/* Rutas de autenticación - redirigen si ya estás logueado */}
         <Route
@@ -61,6 +66,9 @@ export function AppRouter() {
         <Route path={ROUTES.PUBLIC.VERIFY_CODE} element={<VerifyCodeForm />} />
         <Route path={ROUTES.PUBLIC.RESET_PASSWORD} element={<ResetPasswordForm />} />
         <Route path={ROUTES.PUBLIC.RESET_SUCCESS} element={<SuccessResetForm />} />
+        
+        {/* Verificación de email */}
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
 
         {/* Rutas protegidas del Dashboard */}
         <Route
@@ -74,20 +82,43 @@ export function AppRouter() {
           <Route index element={<DashboardHomePage />} />
           <Route path="categories" element={<DashboardCategoriesPage />} />
           <Route path="categories/:id" element={<DashboardCategoryDetailPage />} />
-          <Route path="requests" element={<ServiceRequestsPage />} />
-          <Route path="requests/create" element={<CreateServiceRequestPage />} />
+          <Route path="requests" element={<DashboardRequestsPage />} />
+          <Route path="requests/:id" element={<DashboardRequestDetailPage />} />
+          <Route
+            path="requests/new"
+            element={
+              <RoleProtectedRoute requiredRole="usuario">
+                <ClientCreateRequestForm />
+              </RoleProtectedRoute>
+            }
+          />
           <Route path="chats" element={<DashboardChatsPage />} />
           <Route path="help" element={<DashboardHelpPage />} />
-          <Route path="settings" element={<DashboardSettingsPage />}>
-            <Route index element={
-              <EmptyState
-                title="Configuración"
-                description="Selecciona una opción"
-              />
-            } />
-            <Route path="profile" element={<ProfileSettingsPage />} />
-          </Route>
-
+          <Route path="settings" element={<DashboardSettingsPage />} />
+          <Route
+            path="services"
+            element={
+              <RoleProtectedRoute requiredRole="trabajador">
+                <DashboardServicesPage />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="services/new"
+            element={
+              <RoleProtectedRoute requiredRole="trabajador">
+                <CreateBasicServiceForm />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="services/:id/edit"
+            element={
+              <RoleProtectedRoute requiredRole="trabajador">
+                <DashboardServiceEditPage />
+              </RoleProtectedRoute>
+            }
+          />
         </Route>
 
         {/* Rutas protegidas por rol - solo para trabajadores */}
