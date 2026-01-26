@@ -5,9 +5,8 @@ import { ReviewController } from "../../infra/http/controllers/review.controller
 import type { ReviewDto, WorkerReviewsResponse } from "../../application/dto/review.dto";
 import { LoadingState } from "@/shared/components/feedback/LoadingState";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import { AlertCircle, MessageSquare } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
-import { Separator } from "@/shared/components/ui/separator";
+import { AlertCircle, Star } from "lucide-react";
+import { Card, CardContent } from "@/shared/components/ui/card";
 
 interface WorkerReviewsListProps {
   workerId: string;
@@ -64,11 +63,14 @@ export function WorkerReviewsList({ workerId, showAverage = true }: WorkerReview
 
   if (totalReviews === 0) {
     return (
-      <Card>
-        <CardContent className="py-8">
+      <Card className="border border-border rounded-xl">
+        <CardContent className="py-16">
           <div className="text-center">
-            <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Aún no hay reseñas para este trabajador</p>
+            <Star className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-30" />
+            <p className="text-muted-foreground font-semibold text-lg mb-2">Aún no tienes reseñas</p>
+            <p className="text-sm text-muted-foreground">
+              Las reseñas que recibas de tus clientes aparecerán aquí
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -78,21 +80,42 @@ export function WorkerReviewsList({ workerId, showAverage = true }: WorkerReview
   return (
     <div className="space-y-6">
       {showAverage && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Calificación General</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
+        <Card className="border border-border rounded-xl shadow-sm bg-gradient-to-br from-white to-[#F9FAFE] overflow-hidden">
+          <CardContent className="p-8">
+            <div className="flex items-center gap-8">
+              {/* Rating grande y destacado */}
               <div className="text-center">
-                <div className="text-4xl font-bold">{averageRating.toFixed(1)}</div>
-                <ReviewRating rating={averageRating} size="lg" className="justify-center mt-2" />
-              </div>
-              <Separator orientation="vertical" className="h-16" />
-              <div className="flex-1">
-                <p className="text-sm text-muted-foreground">
-                  Basado en {totalReviews} {totalReviews === 1 ? "reseña" : "reseñas"}
+                <div className="text-6xl font-bold text-foreground mb-3">{averageRating.toFixed(1)}</div>
+                <div className="mb-2">
+                  <ReviewRating rating={averageRating} size="lg" className="justify-center" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground mt-2">
+                  {totalReviews} {totalReviews === 1 ? "reseña" : "reseñas"}
                 </p>
+              </div>
+              
+              {/* Distribución de estrellas (como Google) */}
+              <div className="flex-1 space-y-2">
+                <p className="text-sm font-semibold text-foreground mb-3">Distribución de calificaciones</p>
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const count = reviews.filter(r => Math.round(r.rating) === star).length;
+                  const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
+                  return (
+                    <div key={star} className="flex items-center gap-3">
+                      <div className="flex items-center gap-1 w-20">
+                        <span className="text-sm text-muted-foreground">{star}</span>
+                        <Star className="h-4 w-4 text-[#F4B840] fill-[#F4B840]" />
+                      </div>
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-[#F4B840] rounded-full transition-all"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="text-sm text-muted-foreground w-12 text-right">{count}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </CardContent>
@@ -100,14 +123,17 @@ export function WorkerReviewsList({ workerId, showAverage = true }: WorkerReview
       )}
 
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">
-          Reseñas ({totalReviews})
-        </h3>
-        {reviews.map((review) => (
-          <ReviewCard key={review.id} review={review} />
-        ))}
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-foreground">
+            Todas las reseñas ({totalReviews})
+          </h3>
+        </div>
+        <div className="space-y-4">
+          {reviews.map((review) => (
+            <ReviewCard key={review.id} review={review} />
+          ))}
+        </div>
       </div>
     </div>
   );
 }
-

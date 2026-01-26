@@ -7,6 +7,7 @@ import { cn } from "@/shared/lib/utils";
 import { getCategoryImage } from "@/shared/utils/category-images";
 import { WhatsAppButton } from "@/shared/components/ui/whatsapp-button";
 import { getWorkerAvatar } from "@/shared/utils/avatar-utils";
+import { formatDistance } from "@/shared/utils/distance-utils";
 
 interface ServiceCardProps {
   id: string;
@@ -192,13 +193,13 @@ export function ServiceCard({
           </div>
           
           <div className="flex items-center gap-3">
-            {distanceKm !== undefined && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            {distanceKm !== undefined && distanceKm !== null && formatDistance(distanceKm) && (
+              <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
                 <MapPin className="h-3.5 w-3.5" />
-                <span>{distanceKm < 1 ? `${(distanceKm * 1000).toFixed(0)}m` : `${distanceKm.toFixed(1)}km`}</span>
+                <span>{formatDistance(distanceKm)}</span>
               </div>
             )}
-            {workerLocation && !distanceKm && (
+            {workerLocation && (!distanceKm || distanceKm === null || distanceKm === undefined) && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <MapPin className="h-3.5 w-3.5" />
                 <span className="truncate max-w-[120px]">{workerLocation}</span>

@@ -3,21 +3,26 @@
 
 @theme {
   /* ============================================
-     PALETA OFICIAL - SOFT INDIGO + SKY INDIGO
+     PALETA OFICIAL - TURQUESA + AZUL + PÚRPURA
      Tailwind v4: Variables RGB sin función rgb()
      ============================================ */
-  
-  /* Color Primario — Soft Indigo #6F6AE8 */
-  --color-primary: 111 106 232;
+
+  /* Color Primario — Turquesa #58A3B0 */
+  --color-primary: 88 163 176;
   --color-primary-foreground: 255 255 255;
-  --color-primary-hover: 94 90 214;
-  --color-primary-active: 79 75 196;
-  --color-primary-light: 245 244 252;
-  
-  /* Acento Azul Suave — Sky Indigo #4DA3FF */
-  --color-accent: 77 163 255;
+  --color-primary-hover: 102 185 198;
+  --color-primary-active: 76 148 160;
+  --color-primary-light: 245 250 251;
+
+  /* Acento Azul — Sky Blue #5877B0 */
+  --color-accent: 88 119 176;
   --color-accent-foreground: 255 255 255;
-  --color-accent-soft: 234 242 255;
+  --color-accent-soft: 240 244 249;
+
+  /* Acento Púrpura — Purple #6558B0 */
+  --color-tertiary: 101 88 176;
+  --color-tertiary-foreground: 255 255 255;
+  --color-tertiary-soft: 245 244 251;
   
   /* Estados */
   --color-success: 47 184 168;
@@ -34,7 +39,7 @@
   
   /* Fondos */
   --color-background: 249 250 254;
-  --color-foreground: 30 31 51;
+  --color-foreground: 31 41 55;
   
   /* Fondos de secciones */
   --color-secondary: 241 243 251;
@@ -46,16 +51,16 @@
   --color-card-hover: 251 251 255;
   
   /* Texto */
-  --color-muted-foreground: 138 141 178;
+  --color-muted-foreground: 107 114 128;
   --color-muted: 241 243 251;
   
   /* Bordes */
-  --color-border: 227 230 244;
-  --color-input: 227 230 244;
-  --color-ring: 111 106 232;
+  --color-border: 229 231 235;
+  --color-input: 229 231 235;
+  --color-ring: 88 163 176;
   
-  /* Placeholder - Color muy sutil y claro, casi imperceptible */
-  --color-placeholder: 180 183 200;
+  /* Placeholder - Color gris claro y sutil para mejor accesibilidad */
+  --color-placeholder: 156 163 175;
   
   /* Texto secundario */
   --color-text-secondary: 75 78 109;
@@ -68,6 +73,19 @@
   --radius: 0.75rem;
   --radius-sm: 0.5rem;
   --radius-lg: 1rem;
+  --radius-card: 8px;
+  --radius-button: 6px;
+  --radius-input: 4px;
+
+  /* Spacing system */
+  --spacing-2: 8px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-input-focus: 0 0 0 3px rgba(88, 163, 176, 0.1);
 }
 
 /* Base styles using the variables - Compatibilidad con shadcn/ui */
@@ -124,6 +142,44 @@
     @apply leading-relaxed;
     color: rgb(var(--color-muted-foreground));
     line-height: 1.55;
+  }
+  
+  /* Formularios - Texto negro/oscuro desde el inicio para mejor legibilidad */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  textarea,
+  select {
+    color: rgb(var(--color-foreground));
+  }
+  
+  /* Cuando el input tiene focus, mantiene el color negro */
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus,
+  input[type="number"]:focus,
+  input[type="tel"]:focus,
+  input[type="url"]:focus,
+  input[type="search"]:focus,
+  input[type="date"]:focus,
+  input[type="time"]:focus,
+  input[type="datetime-local"]:focus,
+  textarea:focus,
+  select:focus {
+    color: rgb(var(--color-foreground));
+  }
+  
+  /* Placeholders más transparentes */
+  input::placeholder,
+  textarea::placeholder {
+    color: rgba(var(--color-placeholder), 0.4);
   }
 }
 

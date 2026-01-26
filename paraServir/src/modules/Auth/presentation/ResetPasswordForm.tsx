@@ -16,11 +16,11 @@ export function ResetPasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Validaciones simples para demo
+  // Validaciones menos estrictas: solo mayúsculas, números y caracteres especiales
   const isLong = password.length >= 8;
   const hasUpper = /[A-Z]/.test(password);
-  const hasLower = /[a-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[@$!%*?&]/.test(password);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,8 +33,8 @@ export function ResetPasswordForm() {
       setError("Las contraseñas no coinciden");
       return;
     }
-    if (!(isLong && hasUpper && hasLower && hasNumber)) {
-      setError("La contraseña no cumple los requisitos");
+    if (!(isLong && hasUpper && hasNumber && hasSpecial)) {
+      setError("La contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial (@$!%*?&)");
       return;
     }
     navigate(ROUTES.PUBLIC.RESET_SUCCESS);
@@ -46,7 +46,7 @@ export function ResetPasswordForm() {
         <img src="src/shared/Assets/logo_servir.png" alt="Logo ParaServir" className="w-32 h-32 object-contain mb-2" />
         <h2 className="text-2xl font-bold text-center mb-2">Actualizar contraseña</h2>
         <p className="text-muted-foreground text-center mb-6 max-w-md">
-          Crea tu nueva contraseña con un mínimo de 8 caracteres y una combinación de letras y números.
+          Crea tu nueva contraseña con un mínimo de 8 caracteres, una mayúscula, un número y un carácter especial (@$!%*?&).
         </p>
         <Card className="w-full max-w-md p-8 shadow-none border-none">
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -79,7 +79,7 @@ export function ResetPasswordForm() {
                 <span className={isLong ? "text-[hsl(var(--color-success))]" : "text-muted-foreground"}>● 8 caracteres</span>
                 <span className={hasUpper ? "text-[hsl(var(--color-success))]" : "text-muted-foreground"}>● Letra mayúscula (A-Z)</span>
                 <span className={hasNumber ? "text-[hsl(var(--color-success))]" : "text-muted-foreground"}>● Números (0-9)</span>
-                <span className={hasLower ? "text-[hsl(var(--color-success))]" : "text-muted-foreground"}>● Letra minúscula (a-z)</span>
+                <span className={hasSpecial ? "text-[hsl(var(--color-success))]" : "text-muted-foreground"}>● Carácter especial (@$!%*?&)</span>
               </div>
             </div>
             <div>

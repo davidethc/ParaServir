@@ -1,16 +1,10 @@
 import { useState } from "react";
-import { Input } from "@/shared/components/ui/input";
-import { Select } from "@/shared/components/ui/select";
+import { FloatingInput } from "@/shared/components/ui/floating-input";
+import { FloatingSelect } from "@/shared/components/ui/floating-select";
+import { PasswordStrength } from "@/shared/components/ui/password-strength";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
-import { Label } from "@/shared/components/ui/label";
 import { Alert } from "@/shared/components/ui/alert";
-import {
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem
-} from "@/shared/components/ui/select";
 import { Link, useNavigate } from "react-router-dom";
 import { ROUTES, getPostRegisterRoute } from "@/shared/constants/routes.constants";
 import { AuthStorageService } from "@/shared/services/auth-storage.service";
@@ -19,6 +13,7 @@ import { useDispatch } from "react-redux";
 import { login } from "@/Store/slices/authSlice";
 import { AuthFooter } from "@/shared/components/layout/AuthFooter";
 import { GoogleAuthButton } from "./components/GoogleAuthButton";
+import { Navigation, Loader2 } from "lucide-react";
 
 export function RegisterForm() {
   const [email, setEmail] = useState("");
@@ -33,7 +28,19 @@ export function RegisterForm() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [role, setRole] = useState<"usuario" | "trabajador" | "">("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    firstName?: string;
+    lastName?: string;
+    cedula?: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+    password?: string;
+    confirmPassword?: string;
+    role?: string;
+  }>({});
   const [loading, setLoading] = useState(false);
+  const [gettingLocation, setGettingLocation] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const authController = new AuthController();
@@ -43,8 +50,12 @@ export function RegisterForm() {
     return emailRegex.test(email);
   };
 
-  const validatePassword = (password: string): boolean => {
-    return password.length >= 8;
+  const validatePassword = (pwd: string): boolean => {
+    const long = pwd.length >= 8;
+    const upper = /[A-Z]/.test(pwd);
+    const number = /[0-9]/.test(pwd);
+    const special = /[@$!%*?&]/.test(pwd);
+    return long && upper && number && special;
   };
 
   const validatePhone = (phone: string): boolean => {
@@ -52,38 +63,162 @@ export function RegisterForm() {
     return phoneRegex.test(phone.replace(/\s/g, ""));
   };
 
+  // Función para reverse geocoding: convertir coordenadas a dirección
+  const reverseGeocode = async (latitude: number, longitude: number): Promise<string | null> => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'ParaServir-App/1.0'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al obtener la dirección');
+      }
+
+      const data = await response.json();
+      
+      if (data && data.address) {
+        // Construir dirección legible con calle, ciudad, etc.
+        const address = data.address;
+        let formattedAddress = '';
+        
+        // Priorizar: calle > ciudad > estado > país
+        if (address.road || address.street) {
+          formattedAddress += (address.road || address.street) + ', ';
+        }
+        if (address.neighbourhood || address.suburb) {
+          formattedAddress += (address.neighbourhood || address.suburb) + ', ';
+        }
+        if (address.city || address.town || address.village) {
+          formattedAddress += (address.city || address.town || address.village);
+        } else if (address.state) {
+          formattedAddress += address.state;
+        }
+        if (address.country) {
+          if (formattedAddress) formattedAddress += ', ';
+          formattedAddress += address.country;
+        }
+
+        // Si no hay dirección formateada, usar display_name completo
+        return formattedAddress.trim() || data.display_name || null;
+      }
+      
+      return null;
+    } catch (err) {
+      console.error('Error en reverse geocoding:', err);
+      return null;
+    }
+  };
+
+  // Obtener ubicación actual del usuario
+  const handleGetCurrentLocation = async () => {
+    if (!navigator.geolocation) {
+      setError("Tu navegador no soporta geolocalización");
+      return;
+    }
+
+    setGettingLocation(true);
+    setError(null);
+
+    try {
+      // Obtener coordenadas GPS
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          
+          // Convertir coordenadas a dirección (calles)
+          const address = await reverseGeocode(latitude, longitude);
+          
+          if (address) {
+            setLocation(address);
+          } else {
+            setError("No se pudo obtener la dirección. Puedes escribirla manualmente.");
+          }
+          
+          setGettingLocation(false);
+        },
+        (err) => {
+          // Manejar errores de manera más amigable
+          const errorMessage = err.code === 1 
+            ? "Permisos de ubicación denegados. Puedes escribirla manualmente."
+            : err.code === 3
+            ? "Tiempo de espera agotado. Puedes escribirla manualmente."
+            : `Error al obtener ubicación: ${err.message}. Puedes escribirla manualmente.`;
+          setError(errorMessage);
+          setGettingLocation(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    } catch {
+      setError("Error al obtener la ubicación. Puedes escribirla manualmente.");
+      setGettingLocation(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
 
-    // Validaciones cliente
-    if (!email || !password || !firstName || !lastName || !cedula || !phone || !location || !role) {
-      setError("Todos los campos obligatorios deben ser completados");
-      return;
+    // Validaciones por campo
+    const errors: typeof fieldErrors = {};
+
+    if (!firstName.trim()) {
+      errors.firstName = "El nombre es obligatorio";
     }
 
-    if (!validateEmail(email)) {
-      setError("El formato del correo electrónico no es válido");
-      return;
-    }
-
-    if (!validatePassword(password)) {
-      setError("La contraseña debe tener al menos 8 caracteres");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Las contraseñas no coinciden");
-      return;
-    }
-
-    if (!validatePhone(phone)) {
-      setError("El teléfono debe tener 10 dígitos");
-      return;
+    if (!lastName.trim()) {
+      errors.lastName = "El apellido es obligatorio";
     }
 
     if (!cedula.trim()) {
-      setError("La cédula es obligatoria");
+      errors.cedula = "La cédula es obligatoria";
+    } else if (!/^[0-9]{10}$/.test(cedula.replace(/\s/g, ""))) {
+      errors.cedula = "La cédula debe tener exactamente 10 dígitos";
+    }
+
+    if (!email) {
+      errors.email = "El correo electrónico es obligatorio";
+    } else if (!validateEmail(email)) {
+      errors.email = "El formato del correo electrónico no es válido";
+    }
+
+    if (!phone) {
+      errors.phone = "El teléfono es obligatorio";
+    } else if (!validatePhone(phone)) {
+      errors.phone = "El teléfono debe tener 10 dígitos";
+    }
+
+    if (!location.trim()) {
+      errors.location = "La ubicación es obligatoria";
+    }
+
+    if (!password) {
+      errors.password = "La contraseña es obligatoria";
+    } else if (!validatePassword(password)) {
+      errors.password = "La contraseña no cumple con los requisitos";
+    }
+
+    if (!confirmPassword) {
+      errors.confirmPassword = "Confirma tu contraseña";
+    } else if (password !== confirmPassword) {
+      errors.confirmPassword = "Las contraseñas no coinciden";
+    }
+
+    if (!role) {
+      errors.role = "Debes seleccionar un rol";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
@@ -164,200 +299,299 @@ export function RegisterForm() {
       {/* Izquierda: Formulario */}
       <div className="flex-1 flex flex-col justify-between px-8 py-6 max-w-xl mx-auto">
         <div>
-          <div className="mb-8 mt-8">
-            <div className="mb-2 text-3xl font-semibold text-foreground leading-tight">
-              Encuentra tu próximo empleo<br />Encuentra la próxima solución<br />a tu problema
+          <div className="mb-6 mt-6">
+            <div className="mb-1 text-2xl font-semibold text-foreground leading-snug">
+              Crea tu cuenta en ParaServir
             </div>
-            <div className="mt-4 mb-2 text-base text-muted-foreground leading-relaxed">Regístrate gratis hoy</div>
+            <div className="text-sm text-muted-foreground leading-relaxed">
+              Regístrate gratis en menos de un minuto
+            </div>
           </div>
-          <Card className="p-8">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {error && <Alert variant="destructive">{error}</Alert>}
+          <Card className="p-8 shadow-lg">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {error && <Alert variant="destructive" className="mb-4">{error}</Alert>}
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="firstName" className="font-medium text-foreground">
-                    Nombre <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
+              {/* Sección: Información Personal */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-foreground mb-3">Información Personal</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <FloatingInput
                     id="firstName"
                     name="firstName"
                     type="text"
+                    label="Nombre"
                     value={firstName}
-                    onChange={e => setFirstName(e.target.value)}
-                    placeholder="Juan"
-                    className="mt-1"
+                    onChange={e => {
+                      setFirstName(e.target.value);
+                      if (fieldErrors.firstName) {
+                        setFieldErrors(prev => ({ ...prev, firstName: undefined }));
+                      }
+                    }}
+                    error={fieldErrors.firstName}
                     required
+                    autoComplete="given-name"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="lastName" className="font-medium text-foreground">
-                    Apellido <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
+                  <FloatingInput
                     id="lastName"
                     name="lastName"
                     type="text"
+                    label="Apellido"
                     value={lastName}
-                    onChange={e => setLastName(e.target.value)}
-                    placeholder="Pérez"
-                    className="mt-1"
+                    onChange={e => {
+                      setLastName(e.target.value);
+                      if (fieldErrors.lastName) {
+                        setFieldErrors(prev => ({ ...prev, lastName: undefined }));
+                      }
+                    }}
+                    error={fieldErrors.lastName}
                     required
+                    autoComplete="family-name"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FloatingInput
+                    id="cedula"
+                    name="cedula"
+                    type="text"
+                    label="Cédula"
+                    value={cedula}
+                    onChange={e => {
+                      setCedula(e.target.value.replace(/\D/g, ""));
+                      if (fieldErrors.cedula) {
+                        setFieldErrors(prev => ({ ...prev, cedula: undefined }));
+                      }
+                    }}
+                    error={fieldErrors.cedula}
+                    helperText={!fieldErrors.cedula ? "10 dígitos" : undefined}
+                    required
+                    maxLength={10}
+                    autoComplete="off"
+                  />
+                  <FloatingInput
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    label="Teléfono"
+                    value={phone}
+                    onChange={e => {
+                      setPhone(e.target.value.replace(/\D/g, ""));
+                      if (fieldErrors.phone) {
+                        setFieldErrors(prev => ({ ...prev, phone: undefined }));
+                      }
+                    }}
+                    error={fieldErrors.phone}
+                    helperText={!fieldErrors.phone ? "10 dígitos" : undefined}
+                    required
+                    maxLength={10}
+                    autoComplete="tel"
                   />
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="cedula" className="font-medium text-foreground">
-                  Cédula <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="cedula"
-                  name="cedula"
-                  type="text"
-                  value={cedula}
-                  onChange={e => setCedula(e.target.value)}
-                  placeholder="0928374651"
-                  className="mt-1"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="email" className="font-medium text-foreground">
-                  Correo electrónico <span className="text-destructive">*</span>
-                </Label>
-                <Input
+              {/* Sección: Contacto */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-foreground mb-3">Información de Contacto</h3>
+                <FloatingInput
                   id="email"
                   name="email"
                   type="email"
+                  label="Correo electrónico"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="ejemplo@company.com"
-                  className="mt-1"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="phone" className="font-medium text-foreground">
-                  Teléfono <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  placeholder="0988888888"
-                  className="mt-1"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="location" className="font-medium text-foreground">
-                  Ubicación <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="location"
-                  name="location"
-                  type="text"
-                  value={location}
-                  onChange={e => setLocation(e.target.value)}
-                  onPaste={(e) => {
-                    // Permitir pegar texto normalmente
-                    const pastedText = e.clipboardData.getData('text');
-                    if (pastedText) {
-                      setLocation(pastedText);
+                  onChange={e => {
+                    setEmail(e.target.value);
+                    if (fieldErrors.email) {
+                      setFieldErrors(prev => ({ ...prev, email: undefined }));
                     }
                   }}
-                  placeholder="Quito, Guayaquil, etc."
-                  className="mt-1"
+                  error={fieldErrors.email}
                   required
+                  autoComplete="email"
                 />
-              </div>
 
-              <div>
-                <Label htmlFor="avatarUrl" className="font-medium text-foreground">
-                  URL del Avatar (Opcional)
-                </Label>
-                <Input
+                <div className="relative">
+                  <FloatingInput
+                    id="location"
+                    name="location"
+                    type="text"
+                    label="Ubicación"
+                    value={location}
+                    onChange={e => {
+                      setLocation(e.target.value);
+                      if (fieldErrors.location) {
+                        setFieldErrors(prev => ({ ...prev, location: undefined }));
+                      }
+                    }}
+                    onPaste={(e) => {
+                      const pastedText = e.clipboardData.getData('text');
+                      if (pastedText) {
+                        setLocation(pastedText);
+                      }
+                    }}
+                    error={fieldErrors.location}
+                    helperText={!fieldErrors.location ? "Haz clic en el icono para obtener tu ubicación automáticamente" : undefined}
+                    required
+                    autoComplete="street-address"
+                    className="pr-12"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-20 h-8 w-8 hover:bg-primary/10"
+                    onClick={handleGetCurrentLocation}
+                    disabled={gettingLocation}
+                    title="Obtener mi ubicación automáticamente"
+                    aria-label="Obtener ubicación actual"
+                  >
+                    {gettingLocation ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    ) : (
+                      <Navigation className="h-4 w-4 text-primary" />
+                    )}
+                  </Button>
+                </div>
+                <FloatingInput
                   id="avatarUrl"
                   name="avatarUrl"
                   type="url"
+                  label="URL del Avatar (Opcional)"
                   value={avatarUrl}
                   onChange={e => setAvatarUrl(e.target.value)}
-                  placeholder="https://ejemplo.com/avatar.jpg"
-                  className="mt-1"
+                  autoComplete="photo"
                 />
               </div>
 
-              <div>
-                <Label htmlFor="password" className="font-medium text-foreground">
-                  Contraseña <span className="text-destructive">*</span>
-                </Label>
-                <div className="relative mt-1">
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="Mínimo 8 caracteres"
-                    className=""
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary"
-                    tabIndex={-1}
-                    onClick={() => setShowPassword((v) => !v)}
-                  >
-                    {showPassword ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-1.657.403-3.22 1.125-4.575M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm2.828-2.828A9.956 9.956 0 0122 12c0 5.523-4.477 10-10 10a9.956 9.956 0 01-7.071-2.929m14.142-14.142A9.956 9.956 0 0122 12c0 5.523-4.477 10-10 10a9.956 9.956 0 01-7.071-2.929" /></svg>
+              {/* Sección: Seguridad */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-foreground mb-3">Seguridad</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="relative">
+                      <FloatingInput
+                        id="password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        label="Contraseña"
+                        value={password}
+                        onChange={e => {
+                          setPassword(e.target.value);
+                          if (fieldErrors.password) {
+                            setFieldErrors(prev => ({ ...prev, password: undefined }));
+                          }
+                        }}
+                        error={fieldErrors.password}
+                        required
+                        autoComplete="new-password"
+                        className="pr-12"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 text-muted-foreground hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 rounded p-1"
+                        tabIndex={-1}
+                        onClick={() => setShowPassword((v) => !v)}
+                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      >
+                        {showPassword ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-1.657.403-3.22 1.125-4.575M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm2.828-2.828A9.956 9.956 0 0122 12c0 5.523-4.477 10-10 10a9.956 9.956 0 01-7.071-2.929m14.142-14.142A9.956 9.956 0 0122 12c0 5.523-4.477 10-10 10a9.956 9.956 0 01-7.071-2.929" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    {password && (
+                      <PasswordStrength password={password} className="mt-2" />
                     )}
-                  </button>
+                  </div>
+                  <div>
+                    <div className="relative">
+                      <FloatingInput
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        type={showPassword ? "text" : "password"}
+                        label="Confirmar Contraseña"
+                        value={confirmPassword}
+                        onChange={e => {
+                          setConfirmPassword(e.target.value);
+                          if (fieldErrors.confirmPassword) {
+                            setFieldErrors(prev => ({ ...prev, confirmPassword: undefined }));
+                          }
+                        }}
+                        error={fieldErrors.confirmPassword}
+                        required
+                        autoComplete="new-password"
+                        className="pr-12"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 text-muted-foreground hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 rounded p-1"
+                        tabIndex={-1}
+                        onClick={() => setShowPassword((v) => !v)}
+                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      >
+                        {showPassword ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-1.657.403-3.22 1.125-4.575M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm2.828-2.828A9.956 9.956 0 0122 12c0 5.523-4.477 10-10 10a9.956 9.956 0 01-7.071-2.929m14.142-14.142A9.956 9.956 0 0122 12c0 5.523-4.477 10-10 10a9.956 9.956 0 01-7.071-2.929" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    {confirmPassword && password && (
+                      <div className="mt-2">
+                        {password === confirmPassword ? (
+                          <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            Las contraseñas coinciden
+                          </p>
+                        ) : (
+                          <p className="text-xs text-destructive flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Las contraseñas no coinciden
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="confirmPassword" className="font-medium text-foreground">
-                  Confirmar Contraseña <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="Confirma tu contraseña"
-                  className="mt-1"
+              {/* Sección: Tipo de Cuenta */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-foreground mb-3">Tipo de Cuenta</h3>
+                <FloatingSelect
+                  id="role"
+                  label="Rol"
+                  value={role}
+                  onValueChange={(value) => {
+                    setRole(value as "usuario" | "trabajador");
+                    if (fieldErrors.role) {
+                      setFieldErrors(prev => ({ ...prev, role: undefined }));
+                    }
+                  }}
+                  options={[
+                    { value: "usuario", label: "Usuario" },
+                    { value: "trabajador", label: "Trabajador" }
+                  ]}
+                  error={fieldErrors.role}
                   required
                 />
               </div>
 
-              <div className="relative">
-                <Label htmlFor="role" className="font-medium text-foreground">
-                  Rol <span className="text-destructive">*</span>
-                </Label>
-                <Select value={role} onValueChange={(value) => setRole(value as "usuario" | "trabajador")}>
-                  <SelectTrigger name="role" className="mt-1 w-full" aria-label="Selecciona un rol" id="role">
-                    <SelectValue placeholder="Selecciona un rol" />
-                  </SelectTrigger>
-                  <SelectContent position="popper">
-                    <SelectItem value="usuario">Usuario</SelectItem>
-                    <SelectItem value="trabajador">Trabajador</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="mt-6">
+              <div className="pt-2">
                 <Button 
                   type="submit" 
-                  className="w-full font-medium py-2"
+                  className="w-full font-medium py-2.5 text-base"
                   disabled={loading}
                 >
                   {loading ? "Registrando..." : "Crear cuenta"}
@@ -382,12 +616,11 @@ export function RegisterForm() {
         <AuthFooter />
       </div>
       {/* Derecha: Logo */}
-      <div className="hidden md:flex flex-1 items-center justify-center bg-secondary">
+      <div className="hidden md:flex flex-1 bg-secondary items-start justify-start pt-0">
         <img 
-          src="src/shared/Assets/logo_servir.png" 
+          src="/src/shared/Assets/logo_servir.png" 
           alt="Logo ParaServir" 
-          className="w-[620px] h-[620px] object-contain mx-auto mb-94"
-          style={{ minWidth: 520, minHeight: 520 }}
+          className="w-full h-full object-contain object-top"
         />
       </div>
     </div>

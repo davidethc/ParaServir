@@ -17,7 +17,7 @@ export function ReviewRating({
   className 
 }: ReviewRatingProps) {
   const sizeClasses = {
-    sm: "h-3 w-3",
+    sm: "h-4 w-4",
     md: "h-4 w-4",
     lg: "h-5 w-5",
   };
@@ -27,13 +27,13 @@ export function ReviewRating({
   const emptyStars = maxRating - fullStars - (hasHalfStar ? 1 : 0);
 
   return (
-    <div className={cn("flex items-center gap-1", className)}>
+    <div className={cn("flex items-center gap-0.5", className)}>
       <div className="flex items-center">
         {/* Estrellas llenas */}
         {Array.from({ length: fullStars }).map((_, i) => (
           <Star
             key={`full-${i}`}
-            className={cn(sizeClasses[size], "fill-yellow-400 text-yellow-400")}
+            className={cn(sizeClasses[size], "fill-[#F4B840] text-[#F4B840]")}
           />
         ))}
         
@@ -44,7 +44,7 @@ export function ReviewRating({
               className={cn(sizeClasses[size], "text-gray-300")}
             />
             <Star
-              className={cn(sizeClasses[size], "fill-yellow-400 text-yellow-400 absolute top-0 left-0 overflow-hidden")}
+              className={cn(sizeClasses[size], "fill-[#F4B840] text-[#F4B840] absolute top-0 left-0 overflow-hidden")}
               style={{ width: '50%', clipPath: 'inset(0 50% 0 0)' }}
             />
           </div>
@@ -67,4 +67,3 @@ export function ReviewRating({
     </div>
   );
 }
-

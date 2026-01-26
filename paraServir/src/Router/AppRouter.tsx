@@ -18,7 +18,9 @@ import { DashboardCategoriesPage } from "@/modules/Dashboard/presentation/pages/
 import { DashboardCategoryDetailPage } from "@/modules/Dashboard/presentation/pages/DashboardCategoryDetailPage";
 import { DashboardRequestsPage } from "@/modules/Dashboard/presentation/pages/DashboardRequestsPage";
 import { DashboardChatsPage } from "@/modules/Dashboard/presentation/pages/DashboardChatsPage";
+import { DashboardFavoritesPage } from "@/modules/Dashboard/presentation/pages/DashboardFavoritesPage";
 import { DashboardHelpPage } from "@/modules/Dashboard/presentation/pages/DashboardHelpPage";
+import { DashboardNotificationsPage } from "@/modules/Dashboard/presentation/pages/DashboardNotificationsPage";
 import { DashboardSettingsPage } from "@/modules/Dashboard/presentation/pages/DashboardSettingsPage";
 import { ClientCreateRequestForm } from "@/modules/ServiceRequests/presentation/ClientCreateRequestForm";
 
@@ -33,6 +35,9 @@ import { DashboardServiceEditPage } from "@/modules/Dashboard/presentation/pages
 import { DashboardServicesPage } from "@/modules/Dashboard/presentation/pages/DashboardServicesPage";
 import { DashboardRequestDetailPage } from "@/modules/Dashboard/presentation/pages/DashboardRequestDetailPage";
 import { DashboardAdminPage } from "@/modules/Dashboard/presentation/pages/DashboardAdminPage";
+import { DashboardWorkerStatsPage } from "@/modules/Dashboard/presentation/pages/DashboardWorkerStatsPage";
+import { DashboardMessageTemplatesPage } from "@/modules/Dashboard/presentation/pages/DashboardMessageTemplatesPage";
+import { DashboardReviewsPage } from "@/modules/Dashboard/presentation/pages/DashboardReviewsPage";
 import { WorkerProfilePage } from "@/modules/workers/presentation/pages/WorkerProfilePage";
 import { WorkersListPage } from "@/modules/workers/presentation/pages/WorkersListPage";
 
@@ -95,6 +100,16 @@ export function AppRouter() {
             }
           />
           <Route path="chats" element={<DashboardChatsPage />} />
+          <Route path="reviews" element={<DashboardReviewsPage />} />
+          <Route 
+            path="favorites" 
+            element={
+              <RoleProtectedRoute requiredRole="usuario">
+                <DashboardFavoritesPage />
+              </RoleProtectedRoute>
+            } 
+          />
+          <Route path="notifications" element={<DashboardNotificationsPage />} />
           <Route path="help" element={<DashboardHelpPage />} />
           <Route path="settings" element={<DashboardSettingsPage />} />
           <Route
@@ -126,6 +141,22 @@ export function AppRouter() {
             element={
               <RoleProtectedRoute requiredRole="trabajador">
                 <DashboardServiceEditPage />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="stats"
+            element={
+              <RoleProtectedRoute requiredRole="trabajador">
+                <DashboardWorkerStatsPage />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="message-templates"
+            element={
+              <RoleProtectedRoute requiredRole="trabajador">
+                <DashboardMessageTemplatesPage />
               </RoleProtectedRoute>
             }
           />

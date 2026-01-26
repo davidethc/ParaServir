@@ -8,11 +8,14 @@ import {
   Star, 
   AlertCircle,
   X,
-  Loader2
+  Loader2,
+  RotateCw,
+  Briefcase
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "@/shared/constants/routes.constants";
+import { Badge } from "@/shared/components/ui/badge";
 
 interface NotificationItemProps {
   notification: NotificationDto;
@@ -22,18 +25,20 @@ const typeIcons = {
   message: MessageSquare,
   request_accepted: CheckCircle2,
   request_completed: CheckCircle2,
-  request_in_progress: Loader2,
+  request_in_progress: RotateCw,
+  request_assigned: Briefcase,
   review_received: Star,
   verification_status: AlertCircle,
 };
 
 const typeColors = {
-  message: "text-blue-500",
-  request_accepted: "text-green-500",
-  request_completed: "text-green-500",
-  request_in_progress: "text-yellow-500",
-  review_received: "text-yellow-500",
-  verification_status: "text-purple-500",
+  message: "bg-blue-500 text-white",
+  request_accepted: "bg-green-500 text-white",
+  request_completed: "bg-green-500 text-white",
+  request_in_progress: "bg-orange-500 text-white",
+  request_assigned: "bg-indigo-500 text-white",
+  review_received: "bg-yellow-500 text-white",
+  verification_status: "bg-purple-500 text-white",
 };
 
 export function NotificationItem({ notification }: NotificationItemProps) {
@@ -41,7 +46,7 @@ export function NotificationItem({ notification }: NotificationItemProps) {
   const navigate = useNavigate();
   
   const Icon = typeIcons[notification.type] || AlertCircle;
-  const iconColor = typeColors[notification.type] || "text-muted-foreground";
+  const iconBgColor = typeColors[notification.type] || "bg-gray-500 text-white";
 
   const handleClick = () => {
     if (!notification.is_read) {
@@ -50,14 +55,17 @@ export function NotificationItem({ notification }: NotificationItemProps) {
 
     // Navegar según el tipo de notificación
     if (notification.related_id) {
-      if (notification.type === 'message' || 
-          notification.type === 'request_accepted' || 
-          notification.type === 'request_completed' ||
-          notification.type === 'request_in_progress') {
+      if (notification.type === 'message') {
+        navigate(`${ROUTES.DASHBOARD.CHATS}?conversation=${notification.related_id}`);
+      } else if (
+        notification.type === 'request_accepted' || 
+        notification.type === 'request_completed' ||
+        notification.type === 'request_in_progress' ||
+        notification.type === 'request_assigned'
+      ) {
         navigate(`${ROUTES.DASHBOARD.REQUESTS}/${notification.related_id}`);
       } else if (notification.type === 'review_received') {
-        // Navegar a perfil o reseñas
-        navigate(ROUTES.DASHBOARD.HOME);
+        navigate(ROUTES.DASHBOARD.REVIEWS);
       }
     }
   };
@@ -76,34 +84,55 @@ export function NotificationItem({ notification }: NotificationItemProps) {
     <div
       onClick={handleClick}
       className={cn(
-        "p-3 rounded-lg cursor-pointer transition-colors bg-background hover:bg-muted/50",
-        !notification.is_read && "bg-primary/10 border-l-2 border-l-primary"
+        "px-4 py-3 rounded-lg cursor-pointer transition-colors group relative",
+        "hover:bg-[#F1F3FB] border-l-2",
+        !notification.is_read 
+          ? "bg-blue-50/50 border-l-[#58A3B0] hover:bg-blue-50" 
+          : "border-l-transparent bg-white"
       )}
     >
       <div className="flex items-start gap-3">
-        <Icon className={cn("h-5 w-5 mt-0.5 flex-shrink-0", iconColor)} />
+        {/* Icon */}
+        <div className={cn(
+          "h-9 w-9 rounded-full flex items-center justify-center shrink-0",
+          iconBgColor
+        )}>
+          <Icon className="h-4 w-4" />
+        </div>
+
+        {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <div className="flex-1 min-w-0">
               <p className={cn(
-                "text-sm font-medium",
-                !notification.is_read && "font-semibold"
+                "text-sm leading-relaxed",
+                !notification.is_read ? "font-semibold text-foreground" : "text-foreground"
               )}>
-                {notification.title}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                 {notification.message}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 {timeAgo}
               </p>
             </div>
-            <button
-              onClick={handleDelete}
-              className="text-muted-foreground hover:text-destructive transition-colors p-1"
-            >
-              <X className="h-3 w-3" />
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Badge "New" */}
+              {!notification.is_read && (
+                <Badge 
+                  variant="default" 
+                  className="bg-[#58A3B0] text-white text-xs px-2 py-0.5 h-5 font-normal"
+                >
+                  New
+                </Badge>
+              )}
+              {/* Delete button */}
+              <button
+                onClick={handleDelete}
+                className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1 rounded hover:bg-red-50"
+                aria-label="Eliminar notificación"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

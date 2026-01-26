@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ROUTES } from "@/shared/constants/routes.constants";
 import { useDispatch, useSelector } from "react-redux";
 import { AuthStorageService } from "@/shared/services/auth-storage.service";
-import { isWorker, USER_ROLES } from "@/shared/constants/user-roles.constants";
+import { isWorker, isClient, USER_ROLES } from "@/shared/constants/user-roles.constants";
 import {
   LayoutDashboard,
   Home,
@@ -11,13 +11,19 @@ import {
   FileText,
   MessageSquare,
   Briefcase,
-  HelpCircle,
+  Bell,
   Settings,
   Sun,
   Moon,
   LogOut,
   ChevronDown,
   ChevronUp,
+  Heart,
+  TrendingUp,
+  Wrench,
+  Plus,
+  Star,
+  User,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
@@ -26,7 +32,7 @@ import { cn } from "@/shared/lib/utils";
 import { logout } from "@/Store/slices/authSlice";
 import type { RootState } from "@/Store";
 import { getUserAvatar } from "@/shared/utils/avatar-utils";
-import { NotificationBell } from "@/modules/Notifications/presentation/components/NotificationBell";
+import { useNotifications } from "@/shared/hooks/useNotifications";
 
 interface NavItem {
   label: string;
@@ -37,16 +43,21 @@ interface NavItem {
 }
 
 const userNavItems: NavItem[] = [
-  { label: "Inicio", icon: Home, path: ROUTES.DASHBOARD.HOME },
-  { label: "Categorías", icon: FolderTree, path: ROUTES.DASHBOARD.CATEGORIES, hasSubmenu: true },
+  { label: "Dashboard", icon: LayoutDashboard, path: ROUTES.DASHBOARD.HOME },
+  { label: "Búsqueda", icon: FolderTree, path: ROUTES.DASHBOARD.CATEGORIES },
   { label: "Solicitudes", icon: FileText, path: ROUTES.DASHBOARD.REQUESTS, hasSubmenu: true },
   { label: "Chats", icon: MessageSquare, path: ROUTES.DASHBOARD.CHATS, hasSubmenu: true },
+  { label: "Reseñas", icon: Star, path: ROUTES.DASHBOARD.REVIEWS },
+  { label: "Perfil", icon: User, path: ROUTES.DASHBOARD.SETTINGS },
 ];
 
 const workerNavItems: NavItem[] = [
+  { label: "Dashboard", icon: LayoutDashboard, path: ROUTES.DASHBOARD.HOME },
   { label: "Mis servicios", icon: Briefcase, path: ROUTES.DASHBOARD.SERVICES },
   { label: "Solicitudes", icon: FileText, path: ROUTES.DASHBOARD.REQUESTS, hasSubmenu: true },
   { label: "Chats", icon: MessageSquare, path: ROUTES.DASHBOARD.CHATS, hasSubmenu: true },
+  { label: "Mis reseñas", icon: Star, path: ROUTES.DASHBOARD.REVIEWS },
+  { label: "Plantillas", icon: FileText, path: ROUTES.DASHBOARD.MESSAGE_TEMPLATES },
 ];
 
 export function DashboardSidebar() {
@@ -56,6 +67,7 @@ export function DashboardSidebar() {
   const user = useSelector((state: RootState) => state.auth.user);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const { unreadCount } = useNotifications();
 
   const role = user?.role || AuthStorageService.getUserRole() || USER_ROLES.USUARIO;
   const navItems = isWorker(role) ? workerNavItems : userNavItems;
@@ -108,33 +120,17 @@ export function DashboardSidebar() {
     : undefined;
 
   return (
-    <aside className="w-64 bg-card border-r border-border flex flex-col h-screen sticky top-0">
-      {/* Header con perfil */}
+    <aside className="w-64 bg-[#F1F3FB] border-r border-border flex flex-col h-screen sticky top-0">
+      {/* Logo y título */}
       <div className="p-4 border-b border-border">
-        <div className="flex items-center gap-3 mb-4">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={userAvatar} alt={user?.email || "Usuario"} />
-            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-              {getUserInitials()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">
-              Bienvenido {getUserDisplayName()}
-            </p>
+        <Link to={ROUTES.DASHBOARD.HOME} className="flex items-center gap-2 mb-2">
+          <div className="p-2 bg-[#58A3B0] rounded-lg">
+            <Wrench className="h-6 w-6 text-white" />
           </div>
-          <NotificationBell />
-        </div>
-
-        {/* Botón Dashboard */}
-        <Link to={ROUTES.DASHBOARD.HOME}>
-          <Button
-            variant={isActive(ROUTES.DASHBOARD.HOME) ? "default" : "ghost"}
-            className="w-full justify-start gap-2"
-          >
-            <LayoutDashboard className="h-4 w-4" />
-            Dashboard
-          </Button>
+          <div>
+            <h2 className="text-lg font-bold text-foreground">ParaServir</h2>
+            <p className="text-xs text-muted-foreground">Marketplace de servicios</p>
+          </div>
         </Link>
       </div>
 
@@ -203,17 +199,19 @@ export function DashboardSidebar() {
 
       {/* Footer con utilidades */}
       <div className="p-4 border-t border-border space-y-2">
-        {/* Centro de Ayuda */}
-        <Link to={ROUTES.DASHBOARD.HELP}>
+        {/* Notificaciones */}
+        <Link to={ROUTES.DASHBOARD.NOTIFICATIONS}>
           <Button variant="ghost" className="w-full justify-start gap-2 relative">
-            <HelpCircle className="h-4 w-4" />
-            Centro de Ayuda
-            <Badge
-              variant="destructive"
-              className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs"
-            >
-              8
-            </Badge>
+            <Bell className="h-4 w-4" />
+            Notificaciones
+            {unreadCount > 0 && (
+              <Badge
+                variant="destructive"
+                className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs"
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </Badge>
+            )}
           </Button>
         </Link>
 
@@ -256,6 +254,17 @@ export function DashboardSidebar() {
           <LogOut className="h-4 w-4" />
           Cerrar Sesión
         </Button>
+
+        {/* Botón "Publicar Trabajo" solo para clientes */}
+        {isClient(role) && (
+          <Button
+            className="w-full bg-[#58A3B0] hover:bg-[#58A3B0]/90 text-white gap-2 mt-2"
+            onClick={() => navigate(ROUTES.DASHBOARD.REQUESTS_NEW)}
+          >
+            <Plus className="h-4 w-4" />
+            Publicar Trabajo
+          </Button>
+        )}
       </div>
     </aside>
   );

@@ -1,17 +1,15 @@
 import { useEffect, useState, useMemo } from "react";
-import { ReviewCard } from "./ReviewCard";
 import { ReviewRating } from "./ReviewRating";
 import { ReviewController } from "../../infra/http/controllers/review.controller";
 import type { ClientReviewDto, ClientReviewsResponse } from "../../application/dto/review.dto";
 import { LoadingState } from "@/shared/components/feedback/LoadingState";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import { AlertCircle, MessageSquare, User } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
-import { Separator } from "@/shared/components/ui/separator";
+import { AlertCircle, MessageSquare } from "lucide-react";
+import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { getWorkerAvatar } from "@/shared/utils/avatar-utils";
 
@@ -57,7 +55,7 @@ export function ClientReviewsList({ showAverage = true }: ClientReviewsListProps
   }, [controller, getToken]);
 
   if (loading) {
-    return <LoadingState message="Cargando reseñas..." variant="list" count={3} />;
+    return <LoadingState message="Loading reviews..." variant="list" count={3} />;
   }
 
   if (error) {
@@ -71,13 +69,13 @@ export function ClientReviewsList({ showAverage = true }: ClientReviewsListProps
 
   if (totalReviews === 0) {
     return (
-      <Card>
-        <CardContent className="py-8">
+      <Card className="border border-border rounded-xl">
+        <CardContent className="py-12">
           <div className="text-center">
-            <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Aún no has creado ninguna reseña</p>
+            <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+            <p className="text-muted-foreground font-medium">No reviews yet</p>
             <p className="text-sm text-muted-foreground mt-2">
-              Las reseñas aparecerán aquí después de completar un servicio
+              Your reviews will appear here after you complete a service
             </p>
           </div>
         </CardContent>
@@ -88,20 +86,16 @@ export function ClientReviewsList({ showAverage = true }: ClientReviewsListProps
   return (
     <div className="space-y-6">
       {showAverage && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Tus Reseñas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
+        <Card className="border border-border rounded-xl shadow-sm bg-white">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-6">
               <div className="text-center">
-                <div className="text-4xl font-bold">{averageRating.toFixed(1)}</div>
-                <ReviewRating rating={averageRating} size="lg" className="justify-center mt-2" />
+                <div className="text-5xl font-bold text-foreground mb-2">{averageRating.toFixed(1)}</div>
+                <ReviewRating rating={averageRating} size="lg" className="justify-center" />
               </div>
-              <Separator orientation="vertical" className="h-16" />
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground">
-                  Has creado {totalReviews} {totalReviews === 1 ? "reseña" : "reseñas"}
+                  Based on {totalReviews} {totalReviews === 1 ? "review" : "reviews"}
                 </p>
               </div>
             </div>
@@ -110,8 +104,8 @@ export function ClientReviewsList({ showAverage = true }: ClientReviewsListProps
       )}
 
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">
-          Reseñas Creadas ({totalReviews})
+        <h3 className="text-xl font-semibold text-foreground">
+          All Reviews ({totalReviews})
         </h3>
         {reviews.map((review) => (
           <ClientReviewCard key={review.id} review={review} />
@@ -128,13 +122,13 @@ interface ClientReviewCardProps {
 function ClientReviewCard({ review }: ClientReviewCardProps) {
   const workerName = review.worker_first_name && review.worker_last_name
     ? `${review.worker_first_name} ${review.worker_last_name}`
-    : review.worker_email || "Trabajador";
+    : review.worker_email || "Worker";
   
   const initials = review.worker_first_name && review.worker_last_name
     ? `${review.worker_first_name[0]}${review.worker_last_name[0]}`.toUpperCase()
-    : workerName[0]?.toUpperCase() || "T";
+    : workerName[0]?.toUpperCase() || "W";
 
-  const formattedDate = format(new Date(review.created_at), "dd 'de' MMMM, yyyy", { locale: es });
+  const formattedDate = format(new Date(review.created_at), "MMM d, yyyy", { locale: enUS });
 
   // Generar avatar si no existe
   const displayAvatar = getWorkerAvatar(
@@ -145,36 +139,49 @@ function ClientReviewCard({ review }: ClientReviewCardProps) {
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 flex-1">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={displayAvatar} alt={workerName} />
-              <AvatarFallback className="text-sm">{initials}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <p className="font-semibold text-sm">{workerName}</p>
-                <Badge variant="outline" className="text-xs">
-                  {review.category_name || "Servicio"}
-                </Badge>
+    <Card className="border border-border rounded-xl shadow-sm hover:shadow-md transition-shadow">
+      <CardContent className="p-6">
+        <div className="flex items-start gap-4">
+          {/* Avatar */}
+          <Avatar className="h-12 w-12 shrink-0 border-2 border-border">
+            <AvatarImage src={displayAvatar} alt={workerName} />
+            <AvatarFallback className="bg-[#58A3B0] text-white text-sm font-semibold">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            {/* Header: Name, Badge, Date, and Rating */}
+            <div className="flex items-start justify-between gap-4 mb-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-base text-foreground">{workerName}</h3>
+                  {review.category_name && (
+                    <Badge variant="outline" className="text-xs font-normal">
+                      {review.category_name}
+                    </Badge>
+                  )}
+                </div>
+                {review.service_title && (
+                  <p className="text-sm text-muted-foreground mb-2">{review.service_title}</p>
+                )}
+                <p className="text-xs text-muted-foreground">{formattedDate}</p>
               </div>
-              <p className="text-xs text-muted-foreground">{formattedDate}</p>
-              {review.service_title && (
-                <p className="text-sm text-muted-foreground mt-1">{review.service_title}</p>
-              )}
+              <ReviewRating rating={review.rating} size="sm" showValue={false} />
             </div>
+
+            {/* Comment */}
+            {review.comment ? (
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words mt-3">
+                {review.comment}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground italic mt-3">No comment provided</p>
+            )}
           </div>
-          <ReviewRating rating={review.rating} size="sm" />
         </div>
-      </CardHeader>
-      {review.comment && (
-        <CardContent>
-          <p className="text-sm text-foreground leading-relaxed">{review.comment}</p>
-        </CardContent>
-      )}
+      </CardContent>
     </Card>
   );
 }
-

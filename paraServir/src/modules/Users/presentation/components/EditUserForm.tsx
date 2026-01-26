@@ -11,11 +11,10 @@ import { UpdateUserUseCase } from "../../application/use-cases/update-user.use-c
 import type { UpdateUserDto } from "../../application/dto/update-user.dto";
 import type { UserDto } from "../../application/dto/user.dto";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { AlertCircle, Loader2, Save } from "lucide-react";
+import { AlertCircle, Loader2, Save, Navigation } from "lucide-react";
 
 const updateUserSchema = z.object({
-  first_name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
-  last_name: z.string().min(2, "El apellido debe tener al menos 2 caracteres"),
+  full_name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
   email: z.string().email("Email inválido"),
   phone: z.string().min(10, "El teléfono debe tener al menos 10 caracteres"),
   location: z.string().optional(),
@@ -37,19 +36,26 @@ export function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [gettingLocation, setGettingLocation] = useState(false);
   const { getToken } = useAuth();
   const useCase = new UpdateUserUseCase();
+
+  // Construir nombre completo desde first_name y last_name
+  const getFullName = () => {
+    const parts = [user.first_name, user.last_name].filter(Boolean);
+    return parts.join(" ").trim() || "";
+  };
 
   const {
     register,
     handleSubmit,
     formState: { errors, isDirty },
     reset,
-  } = useForm<UpdateUserDto>({
+    setValue,
+  } = useForm<{ full_name: string; email: string; phone: string; location?: string; cedula?: string | null }>({
     resolver: zodResolver(updateUserSchema),
     defaultValues: {
-      first_name: user.first_name,
-      last_name: user.last_name,
+      full_name: getFullName(),
       email: user.email,
       phone: user.phone,
       location: user.location || "",
@@ -57,7 +63,131 @@ export function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
     },
   });
 
-  const onSubmit = async (data: UpdateUserDto) => {
+  // Función para reverse geocoding: convertir coordenadas a dirección
+  const reverseGeocode = async (latitude: number, longitude: number): Promise<string | null> => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'ParaServir-App/1.0'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al obtener la dirección');
+      }
+
+      const data = await response.json();
+      
+      if (data && data.address) {
+        // Construir dirección legible con calle, ciudad, etc.
+        const address = data.address;
+        let formattedAddress = '';
+        
+        // Priorizar: calle > ciudad > estado > país
+        if (address.road || address.street) {
+          formattedAddress += (address.road || address.street) + ', ';
+        }
+        if (address.neighbourhood || address.suburb) {
+          formattedAddress += (address.neighbourhood || address.suburb) + ', ';
+        }
+        if (address.city || address.town || address.village) {
+          formattedAddress += (address.city || address.town || address.village);
+        } else if (address.state) {
+          formattedAddress += address.state;
+        }
+        if (address.country) {
+          if (formattedAddress) formattedAddress += ', ';
+          formattedAddress += address.country;
+        }
+
+        // Si no hay dirección formateada, usar display_name completo
+        return formattedAddress.trim() || data.display_name || null;
+      }
+      
+      return null;
+    } catch (err) {
+      console.error('Error en reverse geocoding:', err);
+      return null;
+    }
+  };
+
+  // Obtener ubicación actual del usuario
+  const handleGetCurrentLocation = async () => {
+    if (!navigator.geolocation) {
+      setError("Tu navegador no soporta geolocalización");
+      return;
+    }
+
+    setGettingLocation(true);
+    setError(null);
+
+    try {
+      // Obtener coordenadas GPS
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          
+          // Convertir coordenadas a dirección (calles)
+          const address = await reverseGeocode(latitude, longitude);
+          
+          if (address) {
+            setValue("location", address);
+          } else {
+            setError("No se pudo obtener la dirección. Puedes escribirla manualmente.");
+          }
+          
+          setGettingLocation(false);
+        },
+        (err) => {
+          // Manejar errores de manera más amigable
+          const errorMessage = err.code === 1 
+            ? "Permisos de ubicación denegados. Puedes escribirla manualmente."
+            : err.code === 3
+            ? "Tiempo de espera agotado. Puedes escribirla manualmente."
+            : `Error al obtener ubicación: ${err.message}. Puedes escribirla manualmente.`;
+          setError(errorMessage);
+          setGettingLocation(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    } catch (err) {
+      setError("Error al obtener la ubicación. Puedes escribirla manualmente.");
+      setGettingLocation(false);
+    }
+  };
+
+  // Dividir nombre completo en first_name y last_name
+  const splitFullName = (fullName: string): { first_name: string; last_name: string } => {
+    const trimmed = fullName.trim();
+    if (!trimmed) {
+      return { first_name: "", last_name: "" };
+    }
+
+    // Dividir por espacios
+    const parts = trimmed.split(/\s+/).filter(Boolean);
+    
+    if (parts.length === 0) {
+      return { first_name: "", last_name: "" };
+    } else if (parts.length === 1) {
+      // Solo un nombre, todo va a first_name
+      return { first_name: parts[0], last_name: "" };
+    } else {
+      // Primer nombre va a first_name, el resto a last_name
+      return {
+        first_name: parts[0],
+        last_name: parts.slice(1).join(" ")
+      };
+    }
+  };
+
+  const onSubmit = async (data: { full_name: string; email: string; phone: string; location?: string; cedula?: string | null }) => {
     setLoading(true);
     setError(null);
     setSuccess(false);
@@ -69,10 +199,13 @@ export function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
         return;
       }
 
+      // Dividir nombre completo
+      const { first_name, last_name } = splitFullName(data.full_name);
+
       // Preparar datos para actualización (solo campos permitidos)
       const updateData: UpdateUserDto = {
-        first_name: data.first_name,
-        last_name: data.last_name,
+        first_name: first_name || user.first_name, // Si está vacío, mantener el actual
+        last_name: last_name || null, // Permitir vacío/null
         email: data.email,
         phone: data.phone,
         location: data.location || null,
@@ -83,7 +216,13 @@ export function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
       const updatedUser = await useCase.execute(user.id, updateData, token);
       
       setSuccess(true);
-      reset(updateData as any);
+      reset({
+        full_name: getFullNameFromUser(updatedUser),
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        location: updatedUser.location || "",
+        cedula: updatedUser.cedula,
+      });
       
       // Ocultar mensaje de éxito después de 3 segundos
       setTimeout(() => setSuccess(false), 3000);
@@ -97,6 +236,12 @@ export function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper para obtener nombre completo desde UserDto
+  const getFullNameFromUser = (userData: UserDto): string => {
+    const parts = [userData.first_name, userData.last_name].filter(Boolean);
+    return parts.join(" ").trim() || "";
   };
 
   return (
@@ -124,28 +269,15 @@ export function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="first_name">Nombre *</Label>
+              <Label htmlFor="full_name">Nombre *</Label>
               <Input
-                id="first_name"
-                {...register("first_name")}
-                placeholder="Tu nombre"
+                id="full_name"
+                {...register("full_name")}
+                placeholder="Tu nombre completo"
                 disabled={loading}
               />
-              {errors.first_name && (
-                <p className="text-sm text-destructive">{errors.first_name.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="last_name">Apellido *</Label>
-              <Input
-                id="last_name"
-                {...register("last_name")}
-                placeholder="Tu apellido"
-                disabled={loading}
-              />
-              {errors.last_name && (
-                <p className="text-sm text-destructive">{errors.last_name.message}</p>
+              {errors.full_name && (
+                <p className="text-sm text-destructive">{errors.full_name.message}</p>
               )}
             </div>
 
@@ -189,23 +321,45 @@ export function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="location">Ubicación</Label>
-              <Input
-                id="location"
-                {...register("location")}
-                placeholder="Ciudad, País"
-                disabled={loading}
-                onPaste={(e) => {
-                  // Permitir pegar texto normalmente
-                  const pastedText = e.clipboardData.getData('text');
-                  if (pastedText) {
-                    // Actualizar el valor del formulario con el texto pegado
-                    const { onChange } = register("location");
-                    onChange({ target: { value: pastedText } });
-                  }
-                }}
-              />
+              <div className="relative">
+                <Input
+                  id="location"
+                  {...register("location")}
+                  placeholder="Av. Principal 123, Quito, Ecuador"
+                  disabled={loading}
+                  className="pr-12"
+                  onPaste={(e) => {
+                    // Permitir pegar texto normalmente
+                    const pastedText = e.clipboardData.getData('text');
+                    if (pastedText) {
+                      // Actualizar el valor del formulario con el texto pegado
+                      const { onChange } = register("location");
+                      onChange({ target: { value: pastedText } });
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                  onClick={handleGetCurrentLocation}
+                  disabled={loading || gettingLocation}
+                  title="Obtener mi ubicación automáticamente"
+                  aria-label="Obtener ubicación actual"
+                >
+                  {gettingLocation ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  ) : (
+                    <Navigation className="h-4 w-4 text-primary" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Haz clic en el icono de navegación para obtener tu ubicación automáticamente
+              </p>
               {errors.location && (
                 <p className="text-sm text-destructive">{errors.location.message}</p>
               )}
@@ -226,7 +380,7 @@ export function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || !isDirty}>
+            <Button type="submit" disabled={loading || !isDirty} className="bg-[#2FB8A8] hover:bg-[#2FB8A8]/90 text-white">
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -245,4 +399,3 @@ export function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
     </Card>
   );
 }
-

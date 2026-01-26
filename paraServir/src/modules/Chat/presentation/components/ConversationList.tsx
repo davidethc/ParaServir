@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { ChatController } from "../../infra/http/controllers/chat.controller";
 import type { ConversationDto } from "../../application/dto/conversation.dto";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { useSocket } from "@/shared/hooks/useSocket";
 import { AlertCircle, MessageSquare } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -23,6 +24,7 @@ export function ConversationList({ selectedConversationId, onSelectConversation 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { getToken } = useAuth();
+  const { socket, isConnected, joinConversations } = useSocket();
   const controller = useMemo(() => new ChatController(), []);
 
   useEffect(() => {
@@ -38,7 +40,18 @@ export function ConversationList({ selectedConversationId, onSelectConversation 
         }
 
         const response = await controller.getConversations(token);
-        setConversations(response.conversations || []);
+        const loadedConversations = response.conversations || [];
+        setConversations(loadedConversations);
+
+        // Unirse a todas las conversaciones cuando se cargan
+        if (isConnected && loadedConversations.length > 0) {
+          const conversationIds = loadedConversations.map(
+            (c) => c.request_id || c.id
+          ).filter((id): id is string => !!id);
+          if (conversationIds.length > 0) {
+            joinConversations(conversationIds);
+          }
+        }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error al cargar conversaciones";
         setError(errorMessage);
@@ -48,7 +61,46 @@ export function ConversationList({ selectedConversationId, onSelectConversation 
     };
 
     void loadConversations();
-  }, [controller, getToken]);
+  }, [controller, getToken, isConnected, joinConversations]);
+
+  // Escuchar actualizaciones de conversaciones en tiempo real
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleConversationUpdated = (data: { 
+      request_id: string; 
+      last_message: string; 
+      last_message_at: string;
+    }) => {
+      setConversations((prev) => {
+        const updated = prev.map((conv) => {
+          const conversationId = conv.request_id || conv.id;
+          if (conversationId === data.request_id) {
+            return {
+              ...conv,
+              last_message: data.last_message,
+              last_message_at: data.last_message_at,
+              updated_at: data.last_message_at,
+            };
+          }
+          return conv;
+        });
+
+        // Ordenar por último mensaje (más reciente primero)
+        return updated.sort((a, b) => {
+          const aTime = new Date(a.last_message_at || a.updated_at || 0).getTime();
+          const bTime = new Date(b.last_message_at || b.updated_at || 0).getTime();
+          return bTime - aTime;
+        });
+      });
+    };
+
+    socket.on("conversation-updated", handleConversationUpdated);
+
+    return () => {
+      socket.off("conversation-updated", handleConversationUpdated);
+    };
+  }, [socket]);
 
   const formatLastMessageTime = (dateString?: string | null) => {
     if (!dateString) return "";
@@ -60,14 +112,14 @@ export function ConversationList({ selectedConversationId, onSelectConversation 
       if (diffInHours < 24) {
         return formatDistanceToNow(date, { addSuffix: true, locale: es });
       }
-      return format(date, "dd/MM/yyyy", { locale: es });
+      return format(date, "MMM d", { locale: es });
     } catch {
       return "";
     }
   };
 
   if (loading) {
-    return <LoadingState message="Cargando conversaciones..." variant="list" count={3} />;
+    return <LoadingState message="Cargando conversaciones..." variant="list" count={5} />;
   }
 
   if (error) {
@@ -81,22 +133,18 @@ export function ConversationList({ selectedConversationId, onSelectConversation 
 
   if (conversations.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-8">
-          <div className="text-center">
-            <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Aún no tienes conversaciones</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Las conversaciones aparecerán cuando tengas solicitudes de servicio con trabajadores asignados
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-12">
+        <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+        <p className="text-muted-foreground font-medium">No conversations yet</p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Start a conversation from a service request
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {conversations.map((conversation) => {
         const otherUser = conversation.other_user;
         const firstName = otherUser?.first_name || "";
@@ -111,61 +159,56 @@ export function ConversationList({ selectedConversationId, onSelectConversation 
         };
         const initials = getInitials();
         const fullName = `${firstName} ${lastName}`.trim() || "Usuario";
-        const isSelected = selectedConversationId === conversation.request_id;
+        const isSelected = selectedConversationId === conversation.id || selectedConversationId === conversation.request_id;
 
         // Generar avatar si no existe
         const displayAvatar = getUserAvatar(
           otherUser?.id || conversation.id,
-          otherUser?.avatar,
-          fullName
+          otherUser?.avatar_url || otherUser?.avatar,
+          firstName,
+          lastName
         );
 
         return (
-          <Card
+          <div
             key={conversation.id}
             className={cn(
-              "cursor-pointer transition-all hover:shadow-md",
-              isSelected && "ring-2 ring-primary"
+              "flex items-center gap-3 p-4 rounded-lg cursor-pointer transition-all",
+              "hover:bg-[#F1F3FB]",
+              isSelected && "bg-[#58A3B0]/10 border border-[#58A3B0]/20"
             )}
             onClick={() => onSelectConversation(conversation)}
           >
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={displayAvatar} alt={fullName} />
-                  <AvatarFallback className="text-sm">{initials}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <h3 className="font-semibold text-sm truncate">{fullName}</h3>
-                    {conversation.unread_count > 0 && (
-                      <Badge variant="default" className="text-xs">
-                        {conversation.unread_count}
-                      </Badge>
-                    )}
-                  </div>
-                  {conversation.last_message && (
-                    <p className="text-sm text-muted-foreground truncate mb-1">
-                      {conversation.last_message}
-                    </p>
-                  )}
-                  <div className="flex items-center justify-between gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      {conversation.status}
-                    </Badge>
-                    {conversation.last_message_at && (
-                      <span className="text-xs text-muted-foreground">
-                        {formatLastMessageTime(conversation.last_message_at)}
-                      </span>
-                    )}
-                  </div>
-                </div>
+            <Avatar className="h-12 w-12 shrink-0 border-2 border-border">
+              <AvatarImage src={displayAvatar} alt={fullName} />
+              <AvatarFallback className="bg-[#58A3B0] text-white text-sm font-semibold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <h3 className="font-semibold text-sm text-foreground truncate">{fullName}</h3>
+                {conversation.last_message?.created_at && (
+                  <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                    {formatLastMessageTime(conversation.last_message.created_at)}
+                  </span>
+                )}
               </div>
-            </CardContent>
-          </Card>
+              <p className="text-sm text-muted-foreground truncate leading-relaxed">
+                {conversation.last_message?.content || "No messages yet"}
+              </p>
+            </div>
+            {conversation.unread_count && conversation.unread_count > 0 && (
+              <Badge 
+                variant="destructive" 
+                className="h-6 w-6 rounded-full p-0 flex items-center justify-center text-xs font-semibold shrink-0"
+              >
+                {conversation.unread_count > 9 ? '9+' : conversation.unread_count}
+              </Badge>
+            )}
+          </div>
         );
       })}
     </div>
   );
 }
-

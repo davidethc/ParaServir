@@ -65,7 +65,22 @@ export function useGeolocation() {
           });
         },
         (err) => {
-          reject(new Error(`Error al obtener ubicación: ${err.message}`));
+          // Manejar errores de manera silenciosa para errores esperados
+          // Código 1: PERMISSION_DENIED
+          // Código 2: POSITION_UNAVAILABLE
+          // Código 3: TIMEOUT
+          const errorMessage = err.code === 1 
+            ? "Permisos de ubicación denegados"
+            : err.code === 3
+            ? "Tiempo de espera agotado"
+            : "No se pudo obtener la ubicación";
+          
+          reject(new Error(errorMessage));
+        },
+        {
+          timeout: 10000,
+          enableHighAccuracy: true,
+          maximumAge: 0
         }
       );
     });

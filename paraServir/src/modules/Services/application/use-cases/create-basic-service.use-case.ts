@@ -65,9 +65,15 @@ export class CreateBasicServiceUseCase {
                 message?: string;
                 services?: Array<{ id: string; title: string; description: string; base_price: number }>;
                 serviceId?: string;
+                error?: string;
             }>(API_CONFIG.endpoints.services.createBasic, requestBody, {
                 'Authorization': `Bearer ${token}`
             });
+
+            // Verificar si hay error en la respuesta
+            if (data.status === "error") {
+                throw new Error(data.message || data.error || "Error al crear servicio");
+            }
             
             return {
                 serviceId: data.services?.[0]?.id || data.serviceId || `service-${Date.now()}`,

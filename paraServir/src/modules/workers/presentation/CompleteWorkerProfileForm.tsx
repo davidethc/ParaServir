@@ -44,6 +44,7 @@ export function CompleteWorkerProfileForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingExistingData, setLoadingExistingData] = useState(true);
+  const [categorySearch, setCategorySearch] = useState("");
 
   const workerController = useMemo(() => new WorkerHttpController(), []);
   const serviceController = useMemo(() => new ServiceController(), []);
@@ -323,18 +324,57 @@ export function CompleteWorkerProfileForm() {
                         </Label>
                         <Select
                           value={service.category_id}
-                          onValueChange={(value) => updateService(index, "category_id", value)}
+                          onValueChange={(value) => {
+                            updateService(index, "category_id", value);
+                            setCategorySearch(""); // Limpiar búsqueda al seleccionar
+                          }}
                           disabled={loadingCategories}
                         >
                           <SelectTrigger className="mt-1">
                             <SelectValue placeholder={loadingCategories ? "Cargando..." : "Selecciona una categoría"} />
                           </SelectTrigger>
-                          <SelectContent position="popper" className="max-h-[200px]">
-                            {categories.map((cat) => (
-                              <SelectItem key={cat.id} value={cat.id}>
-                                {cat.name}
-                              </SelectItem>
-                            ))}
+                          <SelectContent position="popper" className="max-h-[300px]">
+                            {/* Buscador de categorías */}
+                            <div className="sticky top-0 z-10 bg-card border-b border-border p-2">
+                              <div className="relative">
+                                <svg
+                                  className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <Input
+                                  type="text"
+                                  placeholder="Buscar categoría..."
+                                  value={categorySearch}
+                                  onChange={(e) => setCategorySearch(e.target.value)}
+                                  className="pl-8 h-8 text-sm"
+                                  onClick={(e) => e.stopPropagation()}
+                                  onKeyDown={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                            </div>
+                            {/* Lista de categorías filtradas */}
+                            <div className="max-h-[200px] overflow-y-auto">
+                              {categories
+                                .filter((cat) =>
+                                  cat.name.toLowerCase().includes(categorySearch.toLowerCase())
+                                )
+                                .map((cat) => (
+                                  <SelectItem key={cat.id} value={cat.id}>
+                                    {cat.name}
+                                  </SelectItem>
+                                ))}
+                              {categories.filter((cat) =>
+                                cat.name.toLowerCase().includes(categorySearch.toLowerCase())
+                              ).length === 0 && (
+                                <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                                  No se encontraron categorías
+                                </div>
+                              )}
+                            </div>
                           </SelectContent>
                         </Select>
                       </div>

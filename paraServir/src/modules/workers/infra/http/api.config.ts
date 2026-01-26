@@ -16,6 +16,8 @@ export const API_CONFIG = {
             completeProfile: '/workers/profile', // Endpoint real del backend
             watch: (id: string) => `/workers/watch/${id}`,
             list: '/workers/list',
+            nearby: '/workers/nearby', // Búsqueda avanzada por ubicación
+            search: '/workers/search', // Búsqueda por texto de ubicación
         },
     },
 };

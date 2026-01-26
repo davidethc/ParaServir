@@ -12,7 +12,7 @@ export function DashboardLayout() {
       <DashboardSidebar />
       
       {/* Contenido principal que cambia según la ruta */}
-      <main className="flex-1 overflow-y-auto bg-secondary" style={{ isolation: 'isolate' }}>
+      <main className="flex-1 overflow-y-auto bg-[#F9FAFE]" style={{ isolation: 'isolate' }}>
         <Outlet />
       </main>
     </div>

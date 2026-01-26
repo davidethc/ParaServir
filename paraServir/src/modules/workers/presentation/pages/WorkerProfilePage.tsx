@@ -34,6 +34,10 @@ import { useAuth } from "@/shared/hooks/useAuth";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/Store";
 import { isClient } from "@/shared/constants/user-roles.constants";
+import { useFavorites } from "@/shared/hooks/useFavorites";
+import { AvailabilityCalendar } from "../components/AvailabilityCalendar";
+import { Heart } from "lucide-react";
+import { toast } from "sonner";
 
 export function WorkerProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -50,6 +54,25 @@ export function WorkerProfilePage() {
   const workerUseCase = useMemo(() => new GetWorkerProfileUseCase(), []);
   const serviceController = useMemo(() => new ServiceController(), []);
   const reviewController = useMemo(() => new ReviewController(), []);
+  const { toggleFavorite, isFavorite, checkIsFavorite, loading: favoritesLoading } = useFavorites();
+  const [isWorkerFavorite, setIsWorkerFavorite] = useState(false);
+  const [togglingFavorite, setTogglingFavorite] = useState(false);
+
+  // Verificar si el trabajador está en favoritos
+  useEffect(() => {
+    const checkFavorite = async () => {
+      if (!id || !isClient(role)) return;
+      
+      try {
+        const favorite = await checkIsFavorite(id);
+        setIsWorkerFavorite(favorite);
+      } catch {
+        setIsWorkerFavorite(false);
+      }
+    };
+
+    void checkFavorite();
+  }, [id, role, checkIsFavorite, isFavorite]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -100,6 +123,29 @@ export function WorkerProfilePage() {
     if (id) params.set("workerId", id);
 
     navigate(`${ROUTES.DASHBOARD.REQUESTS_NEW}?${params.toString()}`);
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!id || !isClient(role)) {
+      toast.error("Debes iniciar sesión como cliente para agregar favoritos");
+      return;
+    }
+
+    setTogglingFavorite(true);
+    try {
+      await toggleFavorite(id);
+      setIsWorkerFavorite(prev => !prev);
+      toast.success(
+        isWorkerFavorite 
+          ? "Trabajador eliminado de favoritos" 
+          : "Trabajador agregado a favoritos"
+      );
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error al actualizar favoritos";
+      toast.error(errorMessage);
+    } finally {
+      setTogglingFavorite(false);
+    }
   };
 
   if (loading) {
@@ -165,6 +211,21 @@ export function WorkerProfilePage() {
                   )}
                   {!worker.is_active && (
                     <Badge variant="secondary">Inactivo</Badge>
+                  )}
+                  {isClient(role) && id && (
+                    <Button
+                      variant={isWorkerFavorite ? "default" : "outline"}
+                      size="sm"
+                      onClick={handleToggleFavorite}
+                      disabled={togglingFavorite || favoritesLoading}
+                      className="ml-auto"
+                      aria-label={isWorkerFavorite ? "Eliminar de favoritos" : "Agregar a favoritos"}
+                    >
+                      <Heart 
+                        className={`h-4 w-4 ${isWorkerFavorite ? "fill-current" : ""}`}
+                      />
+                      {isWorkerFavorite ? "En favoritos" : "Agregar a favoritos"}
+                    </Button>
                   )}
                 </div>
                 <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -258,6 +319,18 @@ export function WorkerProfilePage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Disponibilidad */}
+        {id && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Horarios de Disponibilidad</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AvailabilityCalendar workerId={id} readonly={true} />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Reseñas */}
         <Card>

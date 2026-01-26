@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/shared/components/ui/avatar";
 import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
 import { LoadingState } from "@/shared/components/feedback/LoadingState";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { MessageBubble } from "./MessageBubble";
@@ -10,8 +10,10 @@ import { ChatController } from "../../infra/http/controllers/chat.controller";
 import type { ConversationDto } from "../../application/dto/conversation.dto";
 import type { MessageDto } from "../../application/dto/message.dto";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { AlertCircle, MessageSquare } from "lucide-react";
+import { useSocket } from "@/shared/hooks/useSocket";
+import { AlertCircle, MessageSquare, Search, MoreVertical, Phone, Video } from "lucide-react";
 import { getUserAvatar } from "@/shared/utils/avatar-utils";
+import { cn } from "@/shared/lib/utils";
 
 interface ChatWindowProps {
   conversation: ConversationDto | null;
@@ -25,11 +27,52 @@ export function ChatWindow({ conversation, onMessageSent }: ChatWindowProps) {
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { getToken } = useAuth();
+  const { socket, isConnected, joinConversation, leaveConversation } = useSocket();
   const controller = useMemo(() => new ChatController(), []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  // Unirse/salir de conversación cuando cambia
+  useEffect(() => {
+    if (conversation && isConnected) {
+      const conversationId = conversation.request_id || conversation.id;
+      if (conversationId) {
+        joinConversation(conversationId);
+      }
+
+      return () => {
+        if (conversationId) {
+          leaveConversation(conversationId);
+        }
+      };
+    }
+  }, [conversation, isConnected, joinConversation, leaveConversation]);
+
+  // Escuchar mensajes nuevos en tiempo real
+  useEffect(() => {
+    if (!socket || !conversation) return;
+
+    const handleNewMessage = (message: MessageDto) => {
+      // Solo agregar el mensaje si es de esta conversación
+      const conversationId = conversation.request_id || conversation.id;
+      if (message.request_id === conversationId || message.request_id === conversationId) {
+        setMessages((prev) => {
+          // Evitar duplicados
+          const exists = prev.some((m) => m.id === message.id);
+          if (exists) return prev;
+          return [...prev, message];
+        });
+      }
+    };
+
+    socket.on("new-message", handleNewMessage);
+
+    return () => {
+      socket.off("new-message", handleNewMessage);
+    };
+  }, [socket, conversation]);
 
   useEffect(() => {
     if (conversation) {
@@ -95,14 +138,15 @@ export function ChatWindow({ conversation, onMessageSent }: ChatWindowProps) {
 
   if (!conversation) {
     return (
-      <Card className="h-full flex items-center justify-center">
-        <CardContent className="py-8">
-          <div className="text-center">
-            <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Selecciona una conversación para comenzar</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="h-full flex items-center justify-center bg-[#F9FAFE]">
+        <div className="text-center">
+          <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+          <p className="text-muted-foreground font-medium">Select a conversation</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Choose a conversation from the list to start chatting
+          </p>
+        </div>
+      </div>
     );
   }
 
@@ -123,72 +167,117 @@ export function ChatWindow({ conversation, onMessageSent }: ChatWindowProps) {
   // Generar avatar si no existe
   const displayAvatar = getUserAvatar(
     otherUser?.id || conversation.id,
-    otherUser?.avatar,
-    fullName
+    otherUser?.avatar_url || otherUser?.avatar,
+    firstName,
+    lastName
   );
 
+  // Check online status (mock for now)
+  const isOnline = (otherUser as any)?.isOnline ?? false;
+
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="border-b border-border">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={displayAvatar} alt={fullName} />
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <CardTitle className="text-lg">{fullName}</CardTitle>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge variant="outline" className="text-xs">
-                {conversation.status}
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                Solicitud #{conversation.request_id.slice(0, 8)}
-              </span>
+    <div className="h-full flex flex-col bg-[#F9FAFE]">
+      {/* Header */}
+      <div className="bg-white border-b border-border px-6 py-4 sticky top-0 z-10 shadow-sm">
+        <div className="flex items-center justify-between gap-4">
+          {/* Left: User info */}
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <div className="relative shrink-0">
+              <Avatar className="h-12 w-12 border-2 border-border">
+                <AvatarImage src={displayAvatar} alt={fullName} />
+                <AvatarFallback className="bg-[#58A3B0] text-white font-semibold">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              {isOnline && (
+                <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#2FB8A8] rounded-full border-2 border-white" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-lg font-semibold text-foreground truncate">{fullName}</h2>
+                {isOnline && (
+                  <Badge className="bg-[#2FB8A8] text-white text-xs font-medium px-2 py-0.5">
+                    Online
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground truncate">
+                Request #{conversation.request_id?.slice(0, 8) || conversation.id?.slice(0, 8)}
+              </p>
             </div>
           </div>
-        </div>
-      </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
+              <Phone className="h-4 w-4 text-muted-foreground" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
+              <Video className="h-4 w-4 text-muted-foreground" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
+              <Search className="h-4 w-4 text-muted-foreground" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
+              <MoreVertical className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto p-6 bg-[#F9FAFE]">
         {error && (
-          <Alert variant="destructive" className="m-4">
+          <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
         {loading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <LoadingState message="Cargando mensajes..." variant="list" count={3} />
+          <div className="flex items-center justify-center h-full">
+            <LoadingState message="Loading messages..." variant="list" count={3} />
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="text-center py-12">
+            <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+            <p className="text-muted-foreground font-medium">No messages yet</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Send the first message to start the conversation
+            </p>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto p-4">
-            {messages.length === 0 ? (
-              <div className="text-center py-8">
-                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No hay mensajes aún</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Envía el primer mensaje para comenzar la conversación
-                </p>
-              </div>
-            ) : (
-              <>
-                {messages.map((message) => (
-                  <MessageBubble key={message.id} message={message} />
-                ))}
-                <div ref={messagesEndRef} />
-              </>
-            )}
+          <div className="space-y-1">
+            {messages.map((message, index) => {
+              // Determinar si es el primero o último de un grupo
+              const prevMessage = index > 0 ? messages[index - 1] : null;
+              const nextMessage = index < messages.length - 1 ? messages[index + 1] : null;
+              
+              const isFirstInGroup = !prevMessage || prevMessage.sender_id !== message.sender_id;
+              const isLastInGroup = !nextMessage || nextMessage.sender_id !== message.sender_id;
+
+              return (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  showAvatar={true}
+                  isFirstInGroup={isFirstInGroup}
+                  isLastInGroup={isLastInGroup}
+                />
+              );
+            })}
+            <div ref={messagesEndRef} />
           </div>
         )}
+      </div>
 
-        <MessageInput
-          onSendMessage={handleSendMessage}
-          disabled={loading || sending}
-          placeholder={`Escribe un mensaje a ${fullName}...`}
-        />
-      </CardContent>
-    </Card>
+      {/* Message Input */}
+      <MessageInput
+        onSendMessage={handleSendMessage}
+        disabled={loading || sending}
+        placeholder={`Type a message to ${fullName}...`}
+      />
+    </div>
   );
 }
-
